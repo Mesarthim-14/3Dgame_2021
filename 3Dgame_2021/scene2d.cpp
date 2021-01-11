@@ -171,7 +171,11 @@ void CScene2D::Draw(void)
 
 	// テクスチャの設定
 	pD3DDevice->SetTexture(0, NULL);
+}
 
+void CScene2D::BindTexture(LPDIRECT3DTEXTURE9 pTexture)
+{
+	m_pTexture = pTexture;
 }
 
 //=======================================================================================

@@ -32,7 +32,6 @@ CEnemy::CEnemy(int nPriority)
 	memset(m_apModelAnime, 0, sizeof(m_apModelAnime));
 	m_nNumKey = 0;
 	m_apKeyInfo = NULL;
-	m_nKey = 0;;
 	m_nCountMotion = 0;
 	m_nMotionInterval = 0;
 	memset(&m_Motion, 0, sizeof(m_Motion));
@@ -135,6 +134,151 @@ void CEnemy::Draw(void)
 	CCharacter::Draw();
 
 }
+
+//=============================================================================
+// アニメーションの更新処理
+//=============================================================================
+void CEnemy::UpdateMotion(void)
+{
+	KEY *pKey[MAX_MODEL_PARTS];
+	D3DXVECTOR3 diffPos, diffRot, startPos, startRot, setPos, setRot;
+
+	int nKey = GetKey();
+
+	//現在キーが最大キー数未満の場合
+	if (nKey < m_Motion[m_MotionState].nNumKey)
+	{
+		for (int nCntModel = 0; nCntModel < MAX_MODEL_PARTS; nCntModel++)
+		{
+			m_apKeyInfo = &m_Motion[m_MotionState].aKeyInfo[nKey];
+
+			pKey[nCntModel] = &m_apKeyInfo->aKey[nCntModel];
+		}
+
+		for (int nCntModel = 0; nCntModel < MAX_MODEL_PARTS; nCntModel++)
+		{
+			if (m_apModelAnime[nCntModel] != NULL)
+			{
+				D3DXVECTOR3 startPos = m_apModelAnime[nCntModel]->GetPosAnime();
+				D3DXVECTOR3 startRot = m_apModelAnime[nCntModel]->GetRotAnime();
+
+				//1フレーム当たりの更新値 = (終点位置-開始位置) / フレーム数
+				diffPos.x = (pKey[nCntModel]->fPosX - startPos.x) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
+				diffPos.y = (pKey[nCntModel]->fPosY - startPos.y) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
+				diffPos.z = (pKey[nCntModel]->fPosZ - startPos.z) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
+
+				//1フレーム当たりの更新値 = (終点向き-開始向き) / フレーム数
+				diffRot.x = (pKey[nCntModel]->fRotX - startRot.x) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
+				diffRot.y = (pKey[nCntModel]->fRotY - startRot.y) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
+				diffRot.z = (pKey[nCntModel]->fRotZ - startRot.z) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
+
+				setPos.x = diffPos.x * m_nCountMotion + startPos.x;
+				setPos.y = diffPos.y * m_nCountMotion + startPos.y;
+				setPos.z = diffPos.z * m_nCountMotion + startPos.z;
+
+				setRot.x = diffRot.x * m_nCountMotion + startRot.x;
+				setRot.y = diffRot.y * m_nCountMotion + startRot.y;
+				setRot.z = diffRot.z * m_nCountMotion + startRot.z;
+
+				D3DXVECTOR3 pos = m_apModelAnime[nCntModel]->GetPosAnime();
+				D3DXVECTOR3 rot = m_apModelAnime[nCntModel]->GetRotAnime();
+
+				//位置に更新用の位置を加算
+				pos += setPos;
+
+				//向きに更新用の向きを加算
+				rot += setRot;
+
+				//位置の設定
+				m_apModelAnime[nCntModel]->SetPosAnime(setPos);
+
+				//向きの設定
+				m_apModelAnime[nCntModel]->SetRotAnime(setRot);
+			}
+		}
+
+		//モーションカウンターの加算
+		m_nCountMotion++;
+
+		//現在キーの再生フレームに達したら
+		if (m_nCountMotion == m_Motion[m_MotionState].aKeyInfo[nKey].nFrame)
+		{
+			//キーを１つ進める
+			nKey++;
+			SetKey(nKey);
+			m_nCountMotion = 0;
+		}
+	}
+	else
+	{
+		//ループするなら
+		if (m_Motion[m_MotionState].bLoop == true)
+		{
+			SetKey(0);
+		}
+		else
+		{
+			m_nMotionInterval++;
+
+			if (m_nMotionInterval == 10)
+			{
+				m_bMotionPlaing = false;
+			}
+		}
+	}
+}
+
+void CEnemy::UpdateState(void)
+{
+	CSound *pSound = CManager::GetSound();
+
+	STATE state = GetState();
+
+	switch (state)
+	{
+	case STATE_NORMAL:
+		// 通常状態
+
+		break;
+
+	case STATE_DAMAGE:
+
+		// ダメージを受けたら
+		m_nStateCounter++;
+		break;
+	default:
+		break;
+	}
+}
+
+//=============================================================================
+// モーション状態
+//=============================================================================
+void CEnemy::UpdateMotionState(void)
+{
+	ENEMY_MOTION_STATE MotionState = (ENEMY_MOTION_STATE)GetMotionState();
+
+	int nKey = GetKey();
+
+	switch (MotionState)
+	{
+	case ENEMY_MOTION_IDOL:
+		//	m_MotionState = MOTION_ATTACK;
+		break;
+	case ENEMY_MOTION_ATTACK:
+		// 攻撃モーション
+		if (nKey >= 1 && nKey <= 3)
+		{
+
+		}
+		break;
+	case ENEMY_MOTION_DAMAGE:
+
+		break;
+	}
+}
+
+
 
 HRESULT CEnemy::ReadFile(void)
 {

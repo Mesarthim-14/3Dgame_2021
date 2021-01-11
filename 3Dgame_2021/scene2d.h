@@ -25,7 +25,7 @@ public:
 	void Uninit(void);
 	void Update(void);
 	void Draw(void);
-	void BindTexture(LPDIRECT3DTEXTURE9 pTexture) { m_pTexture = pTexture; }
+	void BindTexture(LPDIRECT3DTEXTURE9 pTexture);
 	void InitAnimation(int nCounterAnim, int nPatternAnim, int nLoop);			// アニメーション情報初期化
 	void InitScroll(int nSpeed, float fDivision);								// 画像スクロールの設定
 	void UpdateAnimation(void);													// アニメーションの更新

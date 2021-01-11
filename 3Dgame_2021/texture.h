@@ -32,6 +32,8 @@ public:
 		TEXTURE_NUM_NONE = -1,		// 初期値
 		TEXTURE_NUM_FIRE,			// 炎
 		TEXTURE_NUM_BG,				// 背景
+		TEXTURE_NUM_LIFEBAR,		// ライフの枠
+		TEXTURE_NUM_LIFEGAGE,		// ライフのゲージ
 		TEXTURE_NUM_MAX
 	}TEXTURE_TYPE;
 

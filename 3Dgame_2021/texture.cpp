@@ -15,8 +15,10 @@
 //=============================================================================
 // マクロ定義
 //=============================================================================
-#define TEXTURE_NAME_FIRE	("data/Texture/fire111.png")	// 炎
-#define TEXTURE_NAME_BG		("data/Texture/sky.jpg")		// ゲーム背景
+#define TEXTURE_NAME_FIRE		("data/Texture/fire111.png")	// 炎
+#define TEXTURE_NAME_BG			("data/Texture/sky.jpg")		// ゲーム背景
+#define TEXTURE_NAME_LIFEBAR	("data/Texture/LifeBar.png")	// ライフの枠
+#define TEXTURE_NAME_LIFEGAGE	("data/Texture/Life002.png")	// ライフバー(緑)
 
 //=============================================================================
 // static初期化
@@ -56,6 +58,8 @@ HRESULT CTexture::Load(void)
 	//テクスチャの読み込み
 	D3DXCreateTextureFromFile(pDevice, TEXTURE_NAME_FIRE, &m_apTexture[TEXTURE_NUM_FIRE]);
 	D3DXCreateTextureFromFile(pDevice, TEXTURE_NAME_BG, &m_apTexture[TEXTURE_NUM_BG]);
+	D3DXCreateTextureFromFile(pDevice, TEXTURE_NAME_LIFEBAR, &m_apTexture[TEXTURE_NUM_LIFEBAR]);
+	D3DXCreateTextureFromFile(pDevice, TEXTURE_NAME_LIFEGAGE, &m_apTexture[TEXTURE_NUM_LIFEGAGE]);
 
 	return S_OK;
 }

@@ -120,8 +120,8 @@ public:
 	void Update(void);												// 更新処理
 	void UpdateMotion(void);										// モーション更新処理
 	void Draw(void);												// 描画処理
-	void PlayerState(void);											// プレイヤーの状態
-	void MotionState(void);											// モーション状態
+	void UpdateState(void);											// プレイヤーの状態
+	void UpdateMotionState(void);											// モーション状態
 	void GroundLimit(void);											// 地面の制限
 	HRESULT ReadFile(void);											// ファイルの読み込み
 
@@ -132,7 +132,6 @@ public:
 	void SetMove(D3DXVECTOR3 move);									// 移動量の設定
 
 	// Get関数
-	ENEMY_STATE GetState(void);										// プレイヤーの状態
 	bool GetJump(void);												// ジャンプの情報
 	D3DXVECTOR3 GetPos(void);										// 現在の座標情報
 	D3DXVECTOR3 GetOldPos(void);									// 古い座標情報
@@ -153,7 +152,6 @@ private:
 	ENEMY_MOTION_STATE m_MotionState;						// モーションの状態
 	Motion_Info m_Motion[ENEMY_MOTION_MAX];				// モーション情報
 	int m_nNumKey;									// キーの総数
-	int m_nKey;										// 現在キーのNo
 	int m_nCountMotion;								// モーションカウンター
 	int m_nMotionInterval;							// モーションのインターバル
 	int m_nStateCounter;							// 状態のカウンター

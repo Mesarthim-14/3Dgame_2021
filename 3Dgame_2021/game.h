@@ -27,13 +27,9 @@ class CLight;
 class CMeshField;
 class CBg;
 class CPlayer;
-class CTime;
-class CUi;
-class CUiStart;
-class CBill;
-class CUiEnd;
 class CPause;
 class CSea;
+class CLifeFrame;
 
 //***************************************************************************************
 // インクルードファイル
@@ -54,26 +50,17 @@ public:
 	static CCamera *GetCamera(void);								// カメラのポインタ情報
 	static CLight *GetLight(void);									// ライトのポインタ情報
 	static CPlayer *GetPlayer(void);								// プレイヤーのポインタ情報
-	static CTime *GetTime(void);									// タイムのポインタ情報
-	static CUi *GetUi(void);										// UIのポインタ情報
-	static CUiStart *GetUiStart(void);								// スタート時UIのポインタ情報
-	static CUiEnd *GetUiEnd(void);									// 終了時のポインタ情報
-	static CBill *GetBill(void);									// ビルのポインタ情報
 	static CPause *GetPause(void);									// ポーズ画面のポインタ情報
-
+	static CLifeFrame *GetLifeFrame(void);							// ライフの枠
 private:	
 	static CCamera *m_pCamera;					// カメラのポインタ	
 	static CLight *m_pLight;					// ライトのポインタ
 	static CMeshField *m_pMeshField;			// メッシュフィールドのポインタ
 	static CBg *m_pBg;							// 背景のポインタ
 	static CPlayer *m_pPlayer;					// プレイヤーのポインタ
-	static CTime *m_pTime;						// タイムのポインタ
-	static CUi *m_pUi;							// uiのポインタ
-	static CUiStart *m_pUiStart;				// uistartのポインタ
-	static CUiEnd *m_pUiEnd;					// uiendのポインタ
-	static CBill *m_pBill;						// ビルのポインタ
 	static CSea *m_pSea;						// 海のポインタ
 	static CPause *m_pPause;					// ポーズのポインタ
+	static CLifeFrame *m_pLifeFrame;			// ライフの枠
 	LPD3DXFONT m_pFont;							// デバック用フォント
 	bool m_bGameEnd;							// ゲームのエンドフラグ
 };

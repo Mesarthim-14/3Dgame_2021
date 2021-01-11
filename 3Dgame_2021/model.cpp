@@ -183,7 +183,6 @@ void CModel::Draw(void)
 
 	//•ÛŽ‚µ‚Ä‚¢‚½ƒ}ƒeƒŠƒAƒ‹‚ð–ß‚·
 	pDevice->SetMaterial(&matDef);
-
 }
 
 void CModel::BindModel(MODEL model)

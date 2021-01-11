@@ -136,29 +136,6 @@ HRESULT CRenderer::Init(HWND hWnd, bool bWindow)
 		}
 	}
 
-	// ビューポートの設定
-	D3DVIEWPORT9 view_port;
-
-	// ビューポートの左上座標
-	view_port.X = 0;
-	view_port.Y = 0;
-
-	// ビューポートの幅
-	view_port.Width = SCREEN_WIDTH;
-
-	// ビューポートの高さ
-	view_port.Height = SCREEN_HEIGHT;
-
-	// ビューポート深度設定
-	view_port.MinZ = 0.0f;
-	view_port.MaxZ = 1.0f;
-	
-	// ビューポート設定
-	if (FAILED(m_pD3DDevice->SetViewport(&view_port)))
-	{
-		return E_FAIL;
-	}
-
 	ShowWindow(hWnd, SW_SHOW);
 	UpdateWindow(hWnd);
 

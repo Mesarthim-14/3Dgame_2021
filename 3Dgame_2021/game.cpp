@@ -23,6 +23,7 @@
 #include "keyboard.h"
 #include "fire.h"
 #include "enemy.h"
+#include "life_frame.h"
 
 //=======================================================================================
 // マクロ定義
@@ -36,13 +37,9 @@ CLight *CGame::m_pLight = NULL;
 CMeshField *CGame::m_pMeshField = NULL;
 CBg *CGame::m_pBg = NULL;
 CPlayer *CGame::m_pPlayer = NULL;
-CTime *CGame::m_pTime = NULL;
-CUi *CGame::m_pUi = NULL;
-CUiStart *CGame::m_pUiStart = NULL;
-CBill *CGame::m_pBill = NULL;
-CUiEnd *CGame::m_pUiEnd = NULL;
 CPause *CGame::m_pPause = NULL;
 CSea *CGame::m_pSea = NULL;
+CLifeFrame *CGame::m_pLifeFrame = NULL;
 
 //=======================================================================================
 // コンストラクタ
@@ -114,6 +111,12 @@ HRESULT CGame::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 		m_pBg = CBg::Create();
 	}
 
+	// ライフの枠
+	if (m_pLifeFrame == NULL)
+	{
+		m_pLifeFrame = CLifeFrame::Create();
+	}
+
 	CEnemy::Create(D3DXVECTOR3(0.0f, 0.0f, -500.0f), D3DXVECTOR3(ENEMY_SIZE_X, ENEMY_SIZE_Y, ENEMY_SIZE_Z));
 
 	//BGM
@@ -148,6 +151,12 @@ void CGame::Uninit(void)
 		m_pCamera = NULL;
 	}
 
+	// ライフの枠
+	if (m_pLifeFrame != NULL)
+	{
+		//メモリのクリア
+		m_pLifeFrame = NULL;
+	}
 
 	// メッシュフィールド
 	if (m_pMeshField != NULL)
@@ -177,25 +186,6 @@ void CGame::Uninit(void)
 	{
 		m_pPlayer->Uninit();
 		m_pPlayer = NULL;
-	}
-
-
-	// UI
-	if (m_pUi != NULL)
-	{
-		m_pUi = NULL;
-	}
-
-	// スタートUI
-	if (m_pUiStart != NULL)
-	{
-		m_pUiStart = NULL;
-	}
-
-	// ビル
-	if (m_pBill != NULL)
-	{
-		m_pBill = NULL;
 	}
 
 	//サウンド情報取得
@@ -294,50 +284,14 @@ CPlayer * CGame::GetPlayer(void)
 }
 
 //=======================================================================================
-// タイムの情報
-//=======================================================================================
-CTime * CGame::GetTime(void)
-{
-	return m_pTime;
-}
-
-//=======================================================================================
-// uiの情報
-//=======================================================================================
-CUi * CGame::GetUi(void)
-{
-	return m_pUi;
-}
-
-
-//=======================================================================================
-// uistartの情報
-//=======================================================================================
-CUiStart * CGame::GetUiStart(void)
-{
-	return m_pUiStart;
-}
-
-//=======================================================================================
-// uiendの情報
-//=======================================================================================
-CUiEnd *CGame::GetUiEnd(void)
-{
-	return m_pUiEnd;
-}
-
-//=======================================================================================
-// ビルの情報
-//=======================================================================================
-CBill * CGame::GetBill(void)
-{
-	return m_pBill;
-}
-
-//=======================================================================================
 // コンテニューの情報
 //=======================================================================================
 CPause * CGame::GetPause(void)
 {
 	return m_pPause;
+}
+
+CLifeFrame * CGame::GetLifeFrame(void)
+{
+	return m_pLifeFrame;
 }
