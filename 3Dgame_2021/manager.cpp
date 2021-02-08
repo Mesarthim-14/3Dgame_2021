@@ -1,7 +1,7 @@
 //=============================================================================
 //
 // マネージャー処理 [manager.cpp]
-// Author : 
+// Author : Konishi Yuuto
 //
 //=============================================================================
 
@@ -19,6 +19,7 @@
 #include "manager.h"
 #include "meshfield.h"
 #include "model.h"
+#include "particle_factory.h"
 #include "player.h"
 #include "renderer.h"
 #include "result.h"
@@ -26,7 +27,6 @@
 #include "sound.h"
 #include "texture.h"
 #include "title.h"
-#include "titlelogo.h"
 #include "tutorial.h"
 #include "xfile.h"
 
@@ -179,6 +179,8 @@ void CManager::Uninit(void)
 		//メモリのクリア
 		m_pRenderer = NULL;
 	}
+
+	CScene::ReleaseAll();
 }
 
 //=============================================================================
@@ -228,13 +230,12 @@ void CManager::Draw(void)
 //=============================================================================
 void CManager::LoadAll(void)
 {
-	CTitle::Load();
 	CResult::Load();
 	CMeshField::Load();
-	CTitlelogo::Load();
 	CTutorial::Load();
 	CTexture::Load();
 	CXfile::ModelLoad();
+	CParticleFactory::ReadFile();
 }
 
 //=============================================================================
@@ -243,7 +244,6 @@ void CManager::LoadAll(void)
 void CManager::UnLoadAll(void)
 {
 	CMeshField::UnLoad();
-	CTitlelogo::Unload();
 	CTexture::UnLoad();
 	CXfile::ModelUnLoad();
 }
@@ -289,7 +289,6 @@ void CManager::SetMode(MODE_TYPE mode)
 		if (m_pResult != NULL)
 		{
 			m_pResult->Uninit();
-
 			m_pResult = NULL;
 		}
 		break;
@@ -373,6 +372,7 @@ HRESULT CManager::InitImgui(HWND hWnd)
 
 	return S_OK;
 }
+
 //------------------------------------------------------------------------------
 //Imgui終了
 //------------------------------------------------------------------------------
@@ -448,9 +448,6 @@ void CManager::ShowDebugInfo()
 
 #endif //DEBUG
 }
-
-
-
 
 //=============================================================================
 //ゲームモード情報の取得

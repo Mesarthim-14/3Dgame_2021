@@ -167,5 +167,5 @@ void CBg::Draw(void)
 //	pDevice->SetTexture(0, NULL);
 
 	// •`‰æˆ—
-	CModel::Draw();
+//	CModel::Draw();
 }

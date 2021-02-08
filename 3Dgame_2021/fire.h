@@ -52,7 +52,6 @@ public:
 	void ScaleDown(void);											// 縮小
 private:
 	int m_nLife;													// 体力
-	static LPDIRECT3DTEXTURE9 m_apTexture[MAX_FIRE_TEXTURE];		// テクスチャ情報のポインタ
 	float m_fScale;													// 拡縮用
 	float m_fScaleNum;												// 拡縮の値
 	float m_fAlpha;													// 透明用

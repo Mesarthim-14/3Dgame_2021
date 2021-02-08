@@ -28,6 +28,7 @@ CRenderer::CRenderer()
 //=============================================================================
 CRenderer::~CRenderer()
 {
+
 }
 
 //=============================================================================
@@ -185,7 +186,8 @@ void CRenderer::Uninit(void)
 //=============================================================================
 void CRenderer::Update(void)
 {
-	CScene::AllUpdate();
+	// 全ての更新
+	CScene::UpdateAll();
 }
 
 //=============================================================================
@@ -198,50 +200,48 @@ void CRenderer::Draw(void)
 	// Direct3Dによる描画の開始
 	if (SUCCEEDED(m_pD3DDevice->BeginScene()))
 	{
+		// 射影行列/ビュー/ワールド
+		D3DXMATRIX matProj, matView, matWorld;
+		D3DXMATRIX trans;
 
-			// 射影行列/ビュー/ワールド
-			D3DXMATRIX matProj, matView, matWorld;
-			D3DXMATRIX trans;
+		// カメラが使われていたら
+		if (CGame::GetCamera() != NULL)
+		{
+			// カメラのポインタ取得
+			CCamera *pCamera = CGame::GetCamera();
+			pCamera->SetCamera();
 
-			// カメラが使われていたら
-			if (CGame::GetCamera() != NULL)
-			{
-				// カメラのポインタ取得
-				CCamera *pCamera = CGame::GetCamera();
-				pCamera->SetCamera();
-
-				// バックバッファ＆Ｚバッファのクリア
-				m_pD3DDevice->Clear(0, NULL, (D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER), D3DCOLOR_RGBA(0, 255, 255, 0), 1.0f, 0);
-			
-
-			//オブジェクトクラスの全描画処理呼び出し
-			CScene::AllDraw();
-
-			//環境光（アンビエント）の設定
-			D3DMATERIAL9 material;
-
-			SecureZeroMemory(&material, sizeof(D3DMATERIAL9));
-			material.Ambient.r = 1.0f;
-			material.Ambient.g = 1.0f;
-			material.Ambient.b = 1.0f;
-			material.Ambient.a = 1.0f;
-
-			m_pD3DDevice->SetMaterial(&material);
-			m_pD3DDevice->SetRenderState(D3DRS_AMBIENT, 0x44444444);
-
-			//ライティングを無効にする。
-			m_pD3DDevice->SetRenderState(D3DRS_LIGHTING, TRUE);
-
-			CFade *pFade = CManager::GetFade();
-
-			if (pFade != NULL)
-			{
-				pFade->Draw();
-			}
-
-			// バックバッファとフロントバッファの入れ替え
-			m_pD3DDevice->Present(NULL, NULL, NULL, NULL);
+			// バックバッファ＆Ｚバッファのクリア
+			m_pD3DDevice->Clear(0, NULL, (D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER), D3DCOLOR_RGBA(0, 255, 255, 0), 1.0f, 0);
 		}
+
+		//オブジェクトクラスの全描画処理呼び出し
+		CScene::DrawAll();
+
+		//環境光（アンビエント）の設定
+		D3DMATERIAL9 material;
+
+		SecureZeroMemory(&material, sizeof(D3DMATERIAL9));
+		material.Ambient.r = 1.0f;
+		material.Ambient.g = 1.0f;
+		material.Ambient.b = 1.0f;
+		material.Ambient.a = 1.0f;
+
+		m_pD3DDevice->SetMaterial(&material);
+		m_pD3DDevice->SetRenderState(D3DRS_AMBIENT, 0x44444444);
+
+		//ライティングを無効にする。
+		m_pD3DDevice->SetRenderState(D3DRS_LIGHTING, TRUE);
+
+		CFade *pFade = CManager::GetFade();
+
+		if (pFade != NULL)
+		{
+			pFade->Draw();
+		}
+
+		// バックバッファとフロントバッファの入れ替え
+		m_pD3DDevice->Present(NULL, NULL, NULL, NULL);
 
 		// Direct3Dによる描画の終了
 		m_pD3DDevice->EndScene();

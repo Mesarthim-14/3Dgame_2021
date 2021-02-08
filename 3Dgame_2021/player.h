@@ -16,47 +16,61 @@
 //=============================================================================
 // マクロ定義
 //=============================================================================
-#define LIFE_NUM			(2)			// 表示するライフの数
-#define MAX_PARTS			(10)		// パーツの数
-#define MOTION_KEYSET_MAX	(32)		// キーセット最大数
-#define PLAYER2_POS_X		(0.0f)		// 座標
-#define PLAYER2_POS_Y		(171.0f)	// 座標
-#define PLAYER2_POS_Z		(500)		// 座標
-#define PLAYER_SIZE_X		(1)			// サイズ
-#define PLAYER_SIZE_Y		(1)			// サイズ
-#define PLAYER_SIZE_Z		(1)			// サイズ
-#define MAX_MODEL_PARTS		(21)		// モデルのパーツの最大数
-#define PLAYER_COLLISION_X	(200)		// 当たり判定
-#define PLAYER_COLLISION_Y	(175)		// 当たり判定
-#define PLAYER_COLLISION_Z	(200)		// 当たり判定
-#define WEAPON_COLLISION_X	(150)		// 武器の当たり判定
-#define WEAPON_COLLISION_Y	(150)		// 武器の当たり判定
-#define WEAPON_COLLISION_Z	(150)		// 武器の当たり判定
-#define PLAYER_RADIUS		(150)		// 半径
+#define PLAYER_LIFE_NUM			(100)		// 表示するライフの数
+#define MOTION_KEYSET_MAX		(32)		// キーセット最大数
+#define PLAYER2_POS_X			(0.0f)		// 座標
+#define PLAYER2_POS_Y			(171.0f)	// 座標
+#define PLAYER2_POS_Z			(500)		// 座標
+#define PLAYER_SIZE_X			(1)			// サイズ
+#define PLAYER_SIZE_Y			(1)			// サイズ
+#define PLAYER_SIZE_Z			(1)			// サイズ
 
-//=============================================================================
-// 前方宣言
-//=============================================================================
+#define PLAYER_COLLISION_X		(200)		// 当たり判定
+#define PLAYER_COLLISION_Y		(175)		// 当たり判定
+#define PLAYER_COLLISION_Z		(200)		// 当たり判定
+#define WEAPON_COLLISION_X		(150)		// 武器の当たり判定
+#define WEAPON_COLLISION_Y		(150)		// 武器の当たり判定
+#define WEAPON_COLLISION_Z		(150)		// 武器の当たり判定
+#define PLAYER_ATTACK_DAMAGE	(40)		// 攻撃力
+#define PLAYER_GUARD_CUT_DAMAGE	(3)			// ダメージカットの値
 
 //=============================================================================
 //　モーション状態の列挙型
 //=============================================================================
 typedef enum
 {
-	MOTION_NONE = -1,
-	MOTION_IDOL,		//アイドルモーション
-	MOTION_WALK,		//歩行モーション
-	MOTION_ATTACK,		//攻撃モーション
-	MOTION_JUMP,		//ジャンプモーション
-	MOTION_LANDING,		//着地モーション
-	MOTION_WIN,			//勝利モーション
-	MOTION_RIGHTBOOST,	//右ブースト
-	MOTION_LEFTBOOST,	//左ブースト
-	MOTION_DAMAGE,		//やられ
-	MOTION_BEAM,		//ビーム攻撃
-	MOTION_LOSE,		//負けモーション
-	MOTION_MAX,			//モーション最大数
-}MOTION_STATE;
+	PARTS_NUM_NONE = -1,
+	PARTS_NUM_WAIST,			// [0]腰
+	PARTS_NUM_BODY,				// [1]体
+	PARTS_NUM_HEAD,				// [2]頭
+	PARTS_NUM_RIGHT_SHOLDER,	// [3]右肩
+	PARTS_NUM_RIGHT_UPPERARM,	// [4]右上腕
+	PARTS_NUM_RIGHT_ARM,		// [5]右腕
+	PARTS_NUM_RIGHT_HAND,		// [6]右手のひら
+	PARTS_NUM_LEFT_SHOLDER,		// [7]左肩
+	PARTS_NUM_LEFT_UPPERARM,	// [8]左上腕
+	PARTS_NUM_LEFT_ARM,			// [9]左腕
+	PARTS_NUM_RIGHT_THIGHS,		// [10]右腿
+	PARTS_NUM_RIGHT_SHIN,		// [11]右脛
+	PARTS_NUM_RIGHT_SHOE,		// [12]右足
+	PARTS_NUM_LEFT_THIGHS,		// [13]左腿
+	PARTS_NUM_LEFT_SHIN,		// [14]左脛
+	PARTS_NUM_LEFT_SHOE,		// [15]左足
+	PARTS_NUM_BACKPACK,			// [16]バックパック
+	PARTS_NUM_RIGHT_WING,		// [17]右翼
+	PARTS_NUM_LEFT_WING,		// [18]左翼
+	PARTS_NUM_WEAPON,			// [19]武器
+	PARTS_NUM_COLLISION,		// [20]当たり判定
+	PARTS_NUM_ROOT,				// [21]剣の根本
+	PARTS_NUM_MAX,				// モーション最大数
+}PARTS_NUM;
+
+//=============================================================================
+//　前方宣言
+//=============================================================================
+class CSpBar;
+class CUiSkill;
+class CGuardEffect;
 
 //=============================================================================
 // プレイヤークラス
@@ -64,7 +78,6 @@ typedef enum
 class CPlayer : public CCharacter
 {
 public:
-
 	typedef enum
 	{
 		PLAYER_STATE_NONE = 0,		// 初期置
@@ -75,25 +88,54 @@ public:
 		PLAYER_STATE_MAX			// 最大数
 	}PLAYER_STATE;
 
-	CPlayer(int nPriority = PRIORITY_PLAYER);	// コンストラクタ
-	~CPlayer();									// デストラクタ
+	//=============================================================================
+	//　モーション状態の列挙型
+	//=============================================================================
+	typedef enum
+	{
+		MOTION_NONE = -1,
+		MOTION_IDOL,		//アイドルモーション
+		MOTION_WALK,		//歩行モーション
+		MOTION_ATTACK,		//攻撃モーション
+		MOTION_JUMP,		//ジャンプモーション
+		MOTION_LANDING,		//着地モーション
+		MOTION_GUARD,
+		MOTION_DAMAGE,		//やられ
+		MOTION_MAX,			//モーション最大数
+	}MOTION_STATE;
+
+	CPlayer(PRIORITY Priority = PRIORITY_CHARACTER);	// コンストラクタ
+	~CPlayer();											// デストラクタ
 
 	static CPlayer*Create(D3DXVECTOR3 pos, D3DXVECTOR3 size);		// クリエイト
 
 	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);	// 初期化処理
-	void Uninit(void);												// 終了処理
-	void Update(void);												// 更新処理
-	void Draw(void);												// 描画処理
-	void UpdateState(void);											// プレイヤーの状態
-	void UpdateMotionState(void);											// モーション状態
-	void PlayerControl(void);										// プレイヤーの制御
-	void Walk(void);												// プレイヤーの歩く処理
-	void Jump(void);												// ジャンプの処理
-
+	void Uninit(void);									// 終了処理
+	void Update(void);									// 更新処理
+	void Draw(void);									// 描画処理
+	void UpdateState(void);								// プレイヤーの状態
+	void UpdateMotionState(void);						// モーション状態
+	void PlayerControl(void);							// プレイヤーの制御
+	void Walk(void);									// プレイヤーの歩く処理
+	void Jump(void);									// ジャンプの処理
+	void Death(void);									// 死んだときの処理
+	void Attack(void);									// 攻撃の処理
+	void Guard(void);									// ガードの処理
+	void Avoid(void);									// 回避の処理
+	void SwordLight(void);								// 剣のエフェクトの処理
+	void SwordLocus(void);								// 剣の軌跡
+	bool UseSkill(void);								// スキルの使用
 private:
 	D3DXVECTOR3 m_rotDest;							// 回転(目標値)
-	MOTION_STATE m_MotionState;						// モーションの状態
-	bool m_bArmor;									// 無敵時間
 	bool m_bWalk;									// 歩いているフラグ
+	bool m_bDraw;									// 描画のフラグ
+	bool m_bUseLocusEffect;							// エフェクトの使用フラグ
+	bool m_bAvoid;									// 回避のフラグ
+	bool m_bArmor;									// 無敵時間のフラグ
+	int m_nEndCounter;								// 死んだ後のカウンター
+	int m_nAvoidCounter;							// 回避のカウンター
+	CSpBar *m_pSpBar;								// SPバー
+	CUiSkill *m_pUiSkill;							// スキルのUI
+	CGuardEffect *m_pGuardEffect;					// ガードエフェクトのポインタ
 };
 #endif

@@ -11,31 +11,29 @@
 #include "enemy.h"
 #include "manager.h"
 #include "renderer.h"
+#include "collision.h"
+#include "player.h"
+#include "game.h"
+#include "particle.h"
+#include "particle_factory.h"
+#include "fade.h"
 
 //=============================================================================
 // マクロ定義
 //=============================================================================
-#define LBX_XFAILE_NAME "data/Text/motion_LBX.txt"			// LBXのファイルパス
 
 //=============================================================================
 // コンストラクタ
 //=============================================================================
-CEnemy::CEnemy(int nPriority)
+CEnemy::CEnemy(PRIORITY Priority)
 {
-	m_pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_OldPos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_rot = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_rotDest = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_move = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_fAngle = 0.0f;
-	m_nStateCounter = 0;
-	memset(m_apModelAnime, 0, sizeof(m_apModelAnime));
-	m_nNumKey = 0;
-	m_apKeyInfo = NULL;
-	m_nCountMotion = 0;
-	m_nMotionInterval = 0;
-	memset(&m_Motion, 0, sizeof(m_Motion));
 	m_MotionState = ENEMY_MOTION_IDOL;
+	m_bActive = false;
+	m_bAttack = false;
+	m_bRange = false;
+	m_nAttackInter = 0;
+	m_nAttackFlameCnt = 0;
+	m_nArmorFlame = 0;
 }
 
 //=============================================================================
@@ -43,6 +41,7 @@ CEnemy::CEnemy(int nPriority)
 //=============================================================================
 CEnemy::~CEnemy()
 {
+
 }
 
 //=============================================================================
@@ -59,175 +58,80 @@ CEnemy * CEnemy::Create(D3DXVECTOR3 pos, D3DXVECTOR3 rot)
 	return pEnemy;
 }
 
+//=============================================================================
+// 初期化処理
+//=============================================================================
 HRESULT CEnemy::Init(D3DXVECTOR3 pos, D3DXVECTOR3 rot)
 {
-	////ファイル読み込み
-	//if (FAILED(CEnemy::ReadFile()))
-	//{
-	//	return E_FAIL;
-	//}
-
-	////モデルパーツ数分繰り返す
-	//for (int nCntModel = 0; nCntModel < MAX_MODEL_PARTS; nCntModel++)
-	//{
-	//	if (m_apModelAnime[nCntModel] == NULL)
-	//	{
-	//		//モデルの生成
-	//		m_apModelAnime[nCntModel] = CModelAnime::Create(m_modelfile[nCntModel].xFileName,
-	//			m_modelfile[nCntModel].offsetPos, m_modelfile[nCntModel].offsetRot);
-	//	}
-	//	//親子構造の設定
-	//	if (m_apModelAnime[nCntModel] != NULL)
-	//	{
-	//		//親モデルの場合
-	//		if (nCntModel == 0)
-	//		{
-	//			m_apModelAnime[nCntModel]->SetParent(NULL);
-	//		}
-	//		//子モデルの場合
-	//		else
-	//		{
-	//			//自分の親情報を設定する
-	//			m_apModelAnime[nCntModel]->SetParent(m_apModelAnime[m_modelfile[nCntModel].nParent]);
-	//		}
-	//	}
-	//}
-
 	// 初期化処理
-	SetCharacter(LBX_XFAILE_NAME, MAX_MODEL_PARTS, ENEMY_MOTION_MAX);
-	CCharacter::Init(pos, rot);
+	CCharacter::Init(pos, rot);			// 座標、角度
+	SetCType(CHARACTER_TYPE_ENEMY);		// キャラクターのタイプ
+//	LifeBarCreate(PLAYER_LIFE_NUM);											// ライフバーの生成
 
 	return S_OK;
 }
 
+//=============================================================================
+// 終了処理
+//=============================================================================
 void CEnemy::Uninit(void)
 {
-	//for (int nCntModelNum = 0; nCntModelNum < MAX_MODEL_PARTS; nCntModelNum++)
-	//{
-	//	if (m_apModelAnime[nCntModelNum] != NULL)
-	//	{
-	//		//終了処理
-	//		m_apModelAnime[nCntModelNum]->Uninit();
-
-	//		//メモリの削除
-	//		delete m_apModelAnime[nCntModelNum];
-
-	//		//メモリのクリア
-	//		m_apModelAnime[nCntModelNum] = NULL;
-	//	}
-	//}
-
-	////オブジェクトの破棄
-	//SetDeathFlag();
-
+	// 終了処理
 	CCharacter::Uninit();
-
 }
 
+//=============================================================================
+// 更新処理
+//=============================================================================
 void CEnemy::Update(void)
 {
+	// 更新処理
 	CCharacter::Update();
+
+	// モーション状態
+	UpdateMotionState();
+
+	// プレイヤーを敵視する敵
+	if (m_bActive == true)
+	{
+		// 感知の処理
+		Perception();
+	}
+
+	// 攻撃の間隔を進める
+	m_nAttackFlameCnt++;
+
+	// 攻撃範囲内のとき
+	if (m_bRange == true)
+	{
+		// 攻撃の間隔に至ったら
+		if (m_nAttackFlameCnt >= m_nAttackInter)
+		{
+			// 攻撃の処理
+			Attack();
+		}
+	}
+
+	// 体力の設定
+	if (GetLife() <= 0)
+	{
+		// 死亡時の処理
+		Death();
+	}
 }
 
+//=============================================================================
+// 描画処理
+//=============================================================================
 void CEnemy::Draw(void)
 {
+	// 描画処理
 	CCharacter::Draw();
-
 }
 
 //=============================================================================
-// アニメーションの更新処理
+// エネミーの状態
 //=============================================================================
-void CEnemy::UpdateMotion(void)
-{
-	KEY *pKey[MAX_MODEL_PARTS];
-	D3DXVECTOR3 diffPos, diffRot, startPos, startRot, setPos, setRot;
-
-	int nKey = GetKey();
-
-	//現在キーが最大キー数未満の場合
-	if (nKey < m_Motion[m_MotionState].nNumKey)
-	{
-		for (int nCntModel = 0; nCntModel < MAX_MODEL_PARTS; nCntModel++)
-		{
-			m_apKeyInfo = &m_Motion[m_MotionState].aKeyInfo[nKey];
-
-			pKey[nCntModel] = &m_apKeyInfo->aKey[nCntModel];
-		}
-
-		for (int nCntModel = 0; nCntModel < MAX_MODEL_PARTS; nCntModel++)
-		{
-			if (m_apModelAnime[nCntModel] != NULL)
-			{
-				D3DXVECTOR3 startPos = m_apModelAnime[nCntModel]->GetPosAnime();
-				D3DXVECTOR3 startRot = m_apModelAnime[nCntModel]->GetRotAnime();
-
-				//1フレーム当たりの更新値 = (終点位置-開始位置) / フレーム数
-				diffPos.x = (pKey[nCntModel]->fPosX - startPos.x) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
-				diffPos.y = (pKey[nCntModel]->fPosY - startPos.y) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
-				diffPos.z = (pKey[nCntModel]->fPosZ - startPos.z) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
-
-				//1フレーム当たりの更新値 = (終点向き-開始向き) / フレーム数
-				diffRot.x = (pKey[nCntModel]->fRotX - startRot.x) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
-				diffRot.y = (pKey[nCntModel]->fRotY - startRot.y) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
-				diffRot.z = (pKey[nCntModel]->fRotZ - startRot.z) / (float)m_Motion[m_MotionState].aKeyInfo[nKey].nFrame;
-
-				setPos.x = diffPos.x * m_nCountMotion + startPos.x;
-				setPos.y = diffPos.y * m_nCountMotion + startPos.y;
-				setPos.z = diffPos.z * m_nCountMotion + startPos.z;
-
-				setRot.x = diffRot.x * m_nCountMotion + startRot.x;
-				setRot.y = diffRot.y * m_nCountMotion + startRot.y;
-				setRot.z = diffRot.z * m_nCountMotion + startRot.z;
-
-				D3DXVECTOR3 pos = m_apModelAnime[nCntModel]->GetPosAnime();
-				D3DXVECTOR3 rot = m_apModelAnime[nCntModel]->GetRotAnime();
-
-				//位置に更新用の位置を加算
-				pos += setPos;
-
-				//向きに更新用の向きを加算
-				rot += setRot;
-
-				//位置の設定
-				m_apModelAnime[nCntModel]->SetPosAnime(setPos);
-
-				//向きの設定
-				m_apModelAnime[nCntModel]->SetRotAnime(setRot);
-			}
-		}
-
-		//モーションカウンターの加算
-		m_nCountMotion++;
-
-		//現在キーの再生フレームに達したら
-		if (m_nCountMotion == m_Motion[m_MotionState].aKeyInfo[nKey].nFrame)
-		{
-			//キーを１つ進める
-			nKey++;
-			SetKey(nKey);
-			m_nCountMotion = 0;
-		}
-	}
-	else
-	{
-		//ループするなら
-		if (m_Motion[m_MotionState].bLoop == true)
-		{
-			SetKey(0);
-		}
-		else
-		{
-			m_nMotionInterval++;
-
-			if (m_nMotionInterval == 10)
-			{
-				m_bMotionPlaing = false;
-			}
-		}
-	}
-}
-
 void CEnemy::UpdateState(void)
 {
 	CSound *pSound = CManager::GetSound();
@@ -242,9 +146,18 @@ void CEnemy::UpdateState(void)
 		break;
 
 	case STATE_DAMAGE:
+	{
+		// 状態カウンター取得
+		int nStateCounter = GetStateCounter();
 
-		// ダメージを受けたら
-		m_nStateCounter++;
+		// 一定時間経過したら
+		if (nStateCounter >= m_nArmorFlame)
+		{
+			SetState(STATE_NORMAL);		// 通常状態に戻す
+			SetArmor(false);			// 無敵状態解除
+			SetStateCounter(0);			// 状態カウンターリセット
+		}
+	}
 		break;
 	default:
 		break;
@@ -266,11 +179,41 @@ void CEnemy::UpdateMotionState(void)
 		//	m_MotionState = MOTION_ATTACK;
 		break;
 	case ENEMY_MOTION_ATTACK:
-		// 攻撃モーション
-		if (nKey >= 1 && nKey <= 3)
-		{
 
+		// 攻撃モーション
+		if (nKey >= 1 && nKey <= 2)
+		{
+			// 攻撃時の処理
+			if (AttackCollision() == true)
+			{
+				// プレイヤーの情報取得
+				CPlayer *pPlayer = CGame::GetPlayer();
+
+				if (pPlayer != NULL)
+				{
+					if (pPlayer->GetState() != CPlayer::STATE_DAMAGE && pPlayer->GetArmor() == false)
+					{
+						if (pPlayer->GetMotionState() == CPlayer::MOTION_GUARD)
+						{
+							// プレイヤーにダメージを与える
+							pPlayer->AddDamage(GetAttackPower() / PLAYER_GUARD_CUT_DAMAGE);
+						}
+						else
+						{
+							// プレイヤーにダメージを与える
+							pPlayer->AddDamage(GetAttackPower());
+						}
+
+						// 無敵時間
+						pPlayer->SetArmor(true);
+
+						// 爆発の生成
+						CParticleFactory::CreateParticle(pPlayer->GetPos(), CParticleFactory::PARTICLE_NUM_EXPLOSION);
+					}
+				}
+			}
 		}
+
 		break;
 	case ENEMY_MOTION_DAMAGE:
 
@@ -278,171 +221,144 @@ void CEnemy::UpdateMotionState(void)
 	}
 }
 
-
-
-HRESULT CEnemy::ReadFile(void)
+//=============================================================================
+// プレイヤーを感知
+//=============================================================================
+void CEnemy::Perception(void)
 {
-	FILE *pFile = NULL;		//FILEポインタ
-	char aHeadData[1024];
-	char aModeName[1024];
-	int nModelIndex = 0;	//モデルのインデックス
-	int nMotionType = 0;	//モーションのタイプ
-	int nKeyNum = 0;		//キー番号
-	int nMotionNum = 0;		//モーション番号
+	// モーションの状態を取得
+	ENEMY_MOTION_STATE state = (ENEMY_MOTION_STATE)GetMotionState();
 
-	//ファイルオープン
-	pFile = fopen(LBX_XFAILE_NAME, "r");
-
-	if (pFile != NULL)
+	if (state != CPlayer::MOTION_ATTACK)
 	{
-		do
+		// プレイヤーの情報
+		CPlayer *pPlayer = CGame::GetPlayer();		// メモリ確保
+		D3DXVECTOR3 Ppos = pPlayer->GetPos();		// 座標取得
+
+		// 直線距離の制限
+		float fDisLimit = GetRadius() + pPlayer->GetRadius() + 100.0f;
+
+		//自機を取得する
+		float fPposX = Ppos.x, fPposZ = Ppos.z;			// 自機の座標
+		float fEposX = GetPos().x, fEposZ = GetPos().z;	// 敵の座標
+		float fAngle;									// 角度
+
+		fAngle = atan2f((fEposX - fPposX), (fEposZ - fPposZ));			//角度を決める
+
+		//自機と敵の距離
+		float fDistance = sqrtf(
+			powf((Ppos.x - GetPos().x), 2) +
+			powf((Ppos.z - GetPos().z), 2));
+
+		// 離れていたら
+		if (fDisLimit <= fDistance)
 		{
-			//一列読み込んでモード情報を抽出
-			fgets(aHeadData, sizeof(aHeadData), pFile);
-			sscanf(aHeadData, "%s", aModeName);
+			// 透明な敵の移動
+			D3DXVECTOR3 FollowMove = D3DXVECTOR3(
+				(sinf(fAngle)*-GetSpeed()),
+				0.0f, cosf(fAngle)*-GetSpeed());
 
-			if (strcmp(aModeName, "MODEL_FILENAME") == 0)
+			// 移動量の設定
+			SetMove(FollowMove);
+
+			// 角度の設定
+			D3DXVECTOR3 rot = GetRot();
+
+			SetRot(D3DXVECTOR3(rot.x, fAngle, rot.z));
+
+			// モーションの設定
+			SetMotion(ENEMY_MOTION_WALK);
+
+			// 届かない
+			if (m_bRange == true)
 			{
-				//Xファイルの名前
-				sscanf(aHeadData, "%*s %*s %s %*s %*s", m_modelfile[nModelIndex].xFileName);
+				m_bRange = false;
+			}
+		}
+		else
+		{
+			// 移動量の設定
+			SetMove(D3DXVECTOR3(0.0f, 0.0f, 0.0f));
 
-				//インデックスを１つ進める
-				nModelIndex++;
+			// 届く
+			if (m_bRange == false)
+			{
+				m_bRange = true;
 			}
 
-			if (strcmp(aModeName, "CHARACTERSET") == 0)
-			{
-				//インデックスを最初に戻す
-				nModelIndex = 0;
+			// 角度の設定
+			D3DXVECTOR3 rot = GetRot();
 
-				//END_MOTIONSETを読み込むまで繰り返す
-				while (strcmp(aModeName, "END_CHARACTERSET") != 0)
-				{
-					//一列読み込んでモード情報を抽出
-					fgets(aHeadData, sizeof(aHeadData), pFile);
-					sscanf(aHeadData, "%s", aModeName);
+			SetRot(D3DXVECTOR3(rot.x, fAngle, rot.z));
 
-					if (strcmp(aModeName, "PARTSSET") == 0)
-					{
-						//END_PARTSSETを読み込むまで繰り返す
-						while (strcmp(aModeName, "END_PARTSSET") != 0)
-						{
-							//一列読み込んでモード情報を抽出
-							fgets(aHeadData, sizeof(aHeadData), pFile);
-							sscanf(aHeadData, "%s", aModeName);
-
-							if (strcmp(aModeName, "PARENT") == 0)
-							{
-								//親子情報の設定
-								sscanf(aHeadData, "%*s %*s %d", &m_modelfile[nModelIndex].nParent);
-							}
-							if (strcmp(aModeName, "POS") == 0)
-							{
-								//位置の設定
-								sscanf(aHeadData, "%*s %*s %f %f %f", &m_modelfile[nModelIndex].offsetPos.x,
-									&m_modelfile[nModelIndex].offsetPos.y, &m_modelfile[nModelIndex].offsetPos.z);
-							}
-							if (strcmp(aModeName, "ROT") == 0)
-							{
-								//向きの設定
-								sscanf(aHeadData, "%*s %*s %f %f %f", &m_modelfile[nModelIndex].offsetRot.x,
-									&m_modelfile[nModelIndex].offsetRot.y, &m_modelfile[nModelIndex].offsetRot.z);
-							}
-						}
-						//インデックスを１つ進める
-						nModelIndex++;
-					}
-				}
-			}
-
-			//モーションセット
-			if (strcmp(aModeName, "MOTIONSET") == 0)
-			{
-				//END_MOTIONSETを読み込むまで繰り返す
-				while (strcmp(aModeName, "END_MOTIONSET") != 0)
-				{
-					//一列読み込んでモード情報を抽出
-					fgets(aHeadData, sizeof(aHeadData), pFile);
-					sscanf(aHeadData, "%s", aModeName);
-
-					//ループ情報の取得
-					if (strcmp(aModeName, "LOOP") == 0)
-					{
-						sscanf(aHeadData, "%*s %*s %d", (int*)&m_Motion[nMotionType].bLoop);
-					}
-
-					//キー情報の取得
-					if (strcmp(aModeName, "NUM_KEY") == 0)
-					{
-						sscanf(aHeadData, "%*s %*s %d", (int*)&m_Motion[nMotionType].nNumKey);
-					}
-
-					if (strcmp(aModeName, "KEYSET") == 0)
-					{
-						//END_KEYSETになるまで繰り返す
-						while (strcmp(aModeName, "END_KEYSET") != 0)
-						{
-							//一列読み込んでモード情報を抽出
-							fgets(aHeadData, sizeof(aHeadData), pFile);
-							sscanf(aHeadData, "%s", aModeName);
-
-							//フレーム数の取得
-							if (strcmp(aModeName, "FRAME") == 0)
-							{
-								sscanf(aHeadData, "%*s %*s %d", &m_Motion[nMotionType].aKeyInfo[nMotionNum].nFrame);
-							}
-
-							//各キーのオフセット情報の取得
-							if (strcmp(aModeName, "KEY") == 0)
-							{
-								//END_KEYになるまで繰り返す
-								while (strcmp(aModeName, "END_KEY") != 0)
-								{
-									//一列読み込んでモード情報を抽出
-									fgets(aHeadData, sizeof(aHeadData), pFile);
-									sscanf(aHeadData, "%s", aModeName);
-
-									//位置の取得
-									if (strcmp(aModeName, "POS") == 0)
-									{
-										sscanf(aHeadData, "%*s %*s %f %f %f",
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fPosX,
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fPosY,
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fPosZ);
-									}
-
-									//向きの取得
-									if (strcmp(aModeName, "ROT") == 0)
-									{
-										sscanf(aHeadData, "%*s %*s %f %f %f",
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fRotX,
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fRotY,
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fRotZ);
-									}
-								}
-								//読み終わったらカウントを1つ進める
-								nKeyNum++;
-							}
-						}
-						nKeyNum = 0;
-						nMotionNum++;
-					}
-				}
-				nMotionNum = 0;
-				nMotionType++;
-			}
-		} while (strcmp(aModeName, "END_SCRIPT") != 0);
-
-		//ファイルクローズ
-		fclose(pFile);
-
-		return S_OK;
+			// モーションの設定
+			SetMotion(ENEMY_MOTION_IDOL);
+		}
 	}
-	else
-	{
-		//失敗した場合メッセージボックスを表示
-		MessageBox(NULL, "モーションファイルを開くのに失敗しました", "警告", MB_OK | MB_ICONEXCLAMATION);
+}
 
-		return	E_FAIL;
-	}
+//=============================================================================
+// 死んだときの処理
+//=============================================================================
+void CEnemy::Death(void)
+{
+	// 終了処理
+	Uninit();
+
+	// リザルト画面へ遷移
+	CFade::FADE_MODE mode = CManager::GetFade()->GetFade();
+	CFade *pFade = CManager::GetFade();
+	pFade->SetFade(CManager::MODE_TYPE_RESULT);
+}
+
+//=============================================================================
+// 攻撃の処理
+//=============================================================================
+void CEnemy::Attack(void)
+{
+	// プレイヤーの情報
+	CPlayer *pPlayer = CGame::GetPlayer();		// メモリ確保
+	D3DXVECTOR3 Ppos = pPlayer->GetPos();		// 座標取得
+
+	// 直線距離の制限
+	float fDisLimit = GetRadius() + pPlayer->GetRadius() + 100.0f;
+
+	//自機を取得する
+	float fPposX = Ppos.x, fPposZ = Ppos.z;			// 自機の座標
+	float fEposX = GetPos().x, fEposZ = GetPos().z;	// 敵の座標
+	float fAngle;									// 角度
+
+	fAngle = atan2f((fEposX - fPposX), (fEposZ - fPposZ));			//角度を決める
+
+	// 角度の設定
+	D3DXVECTOR3 rot = GetRot();
+	SetRot(D3DXVECTOR3(rot.x, fAngle, rot.z));
+
+	// 攻撃モーション
+	SetMotion(ENEMY_MOTION_ATTACK);
+	m_nAttackFlameCnt = 0;
+}
+
+//=============================================================================
+// プレイヤー感知の設定
+//=============================================================================
+void CEnemy::SetActive(bool bActive)
+{
+	m_bActive = bActive;
+}
+
+//=============================================================================
+// 攻撃の間隔設定
+//=============================================================================
+void CEnemy::SetAttackInter(int nAttackInter)
+{
+	m_nAttackInter = nAttackInter;
+}
+
+//=============================================================================
+// 無敵状態のフレーム設定
+//=============================================================================
+void CEnemy::SetArmorFlame(int nArmorFlame)
+{
+	m_nArmorFlame = nArmorFlame;
 }

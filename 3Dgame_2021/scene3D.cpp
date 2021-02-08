@@ -1,6 +1,6 @@
 //=============================================================================
 //
-// メイン処理 [scene3D.h]
+// 3Dポリゴンクラス [scene3D.cpp]
 // Author : Konishi Yuuto
 //
 //=============================================================================
@@ -12,16 +12,16 @@
 #include "manager.h"
 #include "renderer.h"
 
-
 //=============================================================================
 // コンストラクタ
 //=============================================================================
-CScene3D::CScene3D(int nPriority) : CScene(nPriority)
+CScene3D::CScene3D(PRIORITY Priority) : CScene(Priority)
 {
 	m_pTexture = NULL;
 	m_pVtxBuff = NULL;
 	m_pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
 	m_rot = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+	m_size = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
 }
 
 //=============================================================================
@@ -30,31 +30,6 @@ CScene3D::CScene3D(int nPriority) : CScene(nPriority)
 CScene3D::~CScene3D()
 {
 
-}
-
-//=============================================================================
-// クリエイト処理
-//=============================================================================
-CScene3D * CScene3D::Create(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
-{
-	//3Dポリゴンクラスのポインタ変数
-	CScene3D *pScene3D = NULL;
-
-	//メモリの確保
-	pScene3D = new CScene3D;
-
-	//メモリが確保できていたら
-	if (pScene3D != NULL)
-	{
-		//初期化処理呼び出し
-		pScene3D->Init(pos, size);
-	}
-	else
-	{
-		return NULL;
-	}
-
-	return pScene3D;
 }
 
 //=============================================================================
@@ -83,10 +58,10 @@ HRESULT CScene3D::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 	m_pVtxBuff->Lock(0, 0, (void**)&pVtx, 0);
 
 	//頂点座標設定の設定
-	pVtx[0].pos = D3DXVECTOR3(- (size.x / 2), + (size.y / 2), 0.0f);
-	pVtx[1].pos = D3DXVECTOR3(+ (size.x / 2), + (size.y / 2), 0.0f);
-	pVtx[2].pos = D3DXVECTOR3(- (size.x / 2), - (size.y / 2), 0.0f);
-	pVtx[3].pos = D3DXVECTOR3(+ (size.x / 2), - (size.y / 2), 0.0f);
+	pVtx[0].pos = D3DXVECTOR3(- (m_size.x / 2), + (m_size.y / 2), 0.0f);
+	pVtx[1].pos = D3DXVECTOR3(+ (m_size.x / 2), + (m_size.y / 2), 0.0f);
+	pVtx[2].pos = D3DXVECTOR3(- (m_size.x / 2), - (m_size.y / 2), 0.0f);
+	pVtx[3].pos = D3DXVECTOR3(+ (m_size.x / 2), - (m_size.y / 2), 0.0f);
 
 	//各頂点の法線の設定（※ベクトルの大きさは１にする必要がある）
 	pVtx[0].nor = D3DXVECTOR3(0.0f, 1.0f, 0.0f);
@@ -125,7 +100,7 @@ void CScene3D::Uninit(void)
 	}
 
 	//オブジェクト破棄
-	SetDeathFlag();
+	Release();
 }
 
 //=============================================================================
@@ -217,7 +192,7 @@ void CScene3D::SetColor(D3DXCOLOR col)
 	//頂点バッファをロック
 	m_pVtxBuff->Lock(0, 0, (void**)&pVtx, 0);
 
-	for (int nCount = 0; nCount < 4; nCount++)
+	for (int nCount = 0; nCount < NUM_VERTEX; nCount++)
 	{
 		//頂点カラーの設定（0～255の数値で設定）
 		pVtx[nCount].col = D3DXCOLOR(0.0f, 1.0f, 0.0f, 1.0f);

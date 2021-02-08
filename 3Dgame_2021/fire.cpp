@@ -21,21 +21,18 @@
 #define ALPHA_NUM		(0.05f)		// 透明度の値
 
 //=============================================================================
-// static初期化
-//=============================================================================
-LPDIRECT3DTEXTURE9 CFire::m_apTexture[MAX_FIRE_TEXTURE] = {};
-
-//=============================================================================
 // インスタンス生成
 //=============================================================================
-CFire * CFire::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size,
-	int nLife)
+CFire * CFire::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size, int nLife)
 {
 	// インスタンス生成
 	CFire *pFire = new CFire;
 
 	if (pFire != NULL)
 	{
+		// テクスチャの設定
+		pFire->BindTexture(CTexture::GetTexture(CTexture::TEXTURE_NUM_FIRE));
+
 		// 距離の設定
 		int nDis =
 			rand() % FIRE_DISTANCE + rand() % FIRE_DISTANCE - rand() % FIRE_DISTANCE - rand() % FIRE_DISTANCE;
@@ -56,9 +53,6 @@ CFire * CFire::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size,
 
 		// 移動量
 		pFire->SetMove(move);
-
-		// テクスチャのの設定
-		pFire->BindTexture(CTexture::GetTexture(CTexture::TEXTURE_NUM_FIRE));
 
 		// ライフの設定
 		pFire->SetLife(nLife);
@@ -99,7 +93,7 @@ HRESULT CFire::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 	m_fScaleNum = SCALE_DOWN;
 
 	// 描画を遅らせる
-	SetLateDraw();
+//	SetLateDraw();
 
 	return S_OK;
 }
@@ -142,55 +136,8 @@ void CFire::Update(void)
 //=============================================================================
 void CFire::Draw(void)
 {
-	// レンダラーの情報を受け取る
-	CRenderer *pRenderer = NULL;
-	pRenderer = CManager::GetRenderer();
-	LPDIRECT3DDEVICE9 pDevice = pRenderer->GetDevice();
-
-	//pDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-	//pDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-	//pDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-
-	//アルファ画像によるブレンド
-	pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-	// 透過処理を行う
-	pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-	pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-	// 加算合成を行う
-	pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);			// aデスティネーションカラー
-
-	D3DMATERIAL9 material, OldMaterial;
-	ZeroMemory(&material, sizeof(D3DMATERIAL9));
-	material.Ambient = D3DXCOLOR(1.0f, 0.4f, 0.04f, 1.0f);
-	material.Diffuse = D3DXCOLOR(0.1f, 0.1f, 0.1f, 1.0f);
-	pDevice->GetMaterial(&OldMaterial);
-	pDevice->SetMaterial(&material);
-	pDevice->SetRenderState(D3DRS_AMBIENT, 0x44444444);
-
-	DWORD ambient;
-	pDevice->GetRenderState(D3DRS_AMBIENT, &ambient);
-	pDevice->SetRenderState(D3DRS_AMBIENT, 0xffffffff);
-	pDevice->LightEnable(0, FALSE);
-
-	// アルファテストを有力化
-	pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
-
-	// アルファテスト基準値の設定
-	pDevice->SetRenderState(D3DRS_ALPHAREF, 200);
-
-	// アルファテストの比較方法の設定(GREATERは基準値より大きい場合)
-	pDevice->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
-
 	// 2Dポリゴン描画処理
 	CBillboard::Draw();
-
-	//pDevice->SetRenderState(D3DRS_ALPHAREF, 0);
-
-	pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);	// aデスティネーションカラー
-
-	pDevice->SetRenderState(D3DRS_AMBIENT, ambient);	// アンビエントを元に戻す
-	pDevice->SetMaterial(&OldMaterial);					// マテリアルを元に戻す
-	pDevice->LightEnable(0, TRUE);						// ライトを戻す
 }
 
 //=============================================================================

@@ -1,6 +1,6 @@
 //=====================================================
 //
-// ビルボードクラスヘッダー [billboard.cpp]
+// ビルボードクラス [billboard.cpp]
 // Author : 小西優斗
 //
 //=====================================================
@@ -15,12 +15,13 @@
 //=====================================================
 // コンストラクタ
 //=====================================================
-CBillboard::CBillboard(int nPriority) : CScene(nPriority)
+CBillboard::CBillboard(PRIORITY Priority) : CScene(Priority)
 {
-	m_Pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);			// 位置情報
+	m_pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);			// 位置情報
 	m_move = D3DXVECTOR3(0.0f, 0.0f, 0.0f);			// 移動量
 	m_size = D3DXVECTOR3(0.0f, 0.0f, 0.0f);			// サイズ
 	m_sizeBase = D3DXVECTOR3(0.0f, 0.0f, 0.0f);		// ベースのサイズ
+	m_color = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);	// カラーの設定
 	m_Dir = D3DXVECTOR3(0.0f, 0.0f, 0.0f);			// 方向7
 	m_pVtxBuff = NULL;								// 頂点バッファへのポインタ
 	m_pTexture = NULL;								// ポリゴンのテクスチャ
@@ -31,6 +32,7 @@ CBillboard::CBillboard(int nPriority) : CScene(nPriority)
 	m_nCounterAnim = 0;								// アニメーションのカウンター
 	m_nPatternAnim = 0;								// アニメーションのパターン数
 	m_nLoop = -1;									// ループするか
+	m_bAlpha = false;								// アルファテストのフラグ
 }
 
 //=====================================================
@@ -60,7 +62,7 @@ HRESULT CBillboard::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 	VERTEX_3D*pVtx = NULL;
 
 	// 情報の代入
-	m_Pos = pos;
+	m_pos = pos;
 	m_size = size;
 	m_sizeBase = size;
 
@@ -74,16 +76,16 @@ HRESULT CBillboard::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 	pVtx[3].pos = D3DXVECTOR3(+ m_size.x / 2, - m_size.y / 2, 0.0f);
 
 	//各頂点の法線の設定（※ベクトルの大きさは１にする必要がある）
-	pVtx[0].nor = D3DXVECTOR3(0.0f, 0.0f, -1.0f);
-	pVtx[1].nor = D3DXVECTOR3(0.0f, 0.0f, -1.0f);
-	pVtx[2].nor = D3DXVECTOR3(0.0f, 0.0f, -1.0f);
-	pVtx[3].nor = D3DXVECTOR3(0.0f, 0.0f, -1.0f);
+	pVtx[0].nor = D3DXVECTOR3(0.0f, 1.0f, 0.0f);
+	pVtx[1].nor = D3DXVECTOR3(0.0f, 1.0f, 0.0f);
+	pVtx[2].nor = D3DXVECTOR3(0.0f, 1.0f, 0.0f);
+	pVtx[3].nor = D3DXVECTOR3(0.0f, 1.0f, 0.0f);
 
 	//頂点カラーの設定（0～255の数値で設定）
-	pVtx[0].col = D3DCOLOR_RGBA(255, 255, 255, 255);
-	pVtx[1].col = D3DCOLOR_RGBA(255, 255, 255, 255);
-	pVtx[2].col = D3DCOLOR_RGBA(255, 255, 255, 255);
-	pVtx[3].col = D3DCOLOR_RGBA(255, 255, 255, 255);
+	pVtx[0].col = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
+	pVtx[1].col = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
+	pVtx[2].col = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
+	pVtx[3].col = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
 
 	// テクスチャの設定
 	pVtx[0].tex = D3DXVECTOR2(0.0f, 0.0f);
@@ -110,7 +112,7 @@ void CBillboard::Uninit(void)
 	}
 
 	//オブジェクト破棄
-	SetDeathFlag();
+	Release();
 }
 
 //=====================================================
@@ -119,13 +121,22 @@ void CBillboard::Uninit(void)
 void CBillboard::Update(void)
 {
 	// 移動量加算
-	m_Pos += m_move;
+	m_pos += m_move;
 
 	// アニメーションの設定がされたとき
 	if (m_nPatternAnim != 0)
 	{
 		// アニメーションを更新する
 		UpdateAnimation();
+	}
+
+	// 体力を減らしていく
+	m_nLife--;
+
+	if (m_nLife <= 0)
+	{
+		// 終了処理
+		Uninit();
 	}
 }
 
@@ -136,6 +147,38 @@ void CBillboard::Draw(void)
 {
 	// デバイス情報取得
 	LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
+
+	// 加算合成を行う
+	pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);			// aデスティネーションカラー
+
+	D3DMATERIAL9 material, OldMaterial;
+	ZeroMemory(&material, sizeof(D3DMATERIAL9));
+	material.Ambient = m_color;
+	material.Diffuse = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
+	pDevice->GetMaterial(&OldMaterial);
+	pDevice->SetMaterial(&material);
+	pDevice->SetRenderState(D3DRS_AMBIENT, 0x44444444);
+
+	// 光の影響を無くす
+	DWORD ambient;
+	pDevice->GetRenderState(D3DRS_AMBIENT, &ambient);
+	pDevice->SetRenderState(D3DRS_AMBIENT, 0xffffffff);
+	pDevice->LightEnable(0, FALSE);
+
+	// アルファテストを有力化
+	pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
+
+	// アルファテストが有効なら
+	if (m_bAlpha == true)
+	{
+		pDevice->SetRenderState(D3DRS_ALPHAREF, 0xC0);
+		pDevice->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATEREQUAL);
+	}
+	else
+	{
+		// アルファテスト基準値の設定
+		pDevice->SetRenderState(D3DRS_ALPHAREF, 45);
+	}
 
 	//計算用のマトリクス
 	D3DXMATRIX mtxRot, mtxTrans, mtxScale;
@@ -160,7 +203,7 @@ void CBillboard::Draw(void)
 	m_mtxWorld._43 = 0;
 
 	// 位置を反映、ワールドマトリクス設定、ポリゴン描画
-	D3DXMatrixTranslation(&mtxTrans, m_Pos.x, m_Pos.y, m_Pos.z);
+	D3DXMatrixTranslation(&mtxTrans, m_pos.x, m_pos.y, m_pos.z);
 	D3DXMatrixMultiply(&m_mtxWorld, &m_mtxWorld, &mtxTrans);
 
 	// ワールドマトリクスの設定 初期化、向き、位置
@@ -180,6 +223,20 @@ void CBillboard::Draw(void)
 
 	pDevice->SetTexture(0, NULL);
 
+	// アルファテストが有効でなかったら
+	if (m_bAlpha != true)
+	{
+		// アルファテスト基準値の設定
+		pDevice->SetRenderState(D3DRS_ALPHAREF, 0);
+	}
+
+	pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);	// aデスティネーションカラー
+
+	pDevice->SetRenderState(D3DRS_AMBIENT, ambient);
+
+	pDevice->SetMaterial(&OldMaterial);					// マテリアルを元に戻す
+
+//	pDevice->SetRenderState(D3DRS_AMBIENT, ambient);
 	pDevice->LightEnable(0, TRUE);
 }
 
@@ -263,7 +320,7 @@ void CBillboard::UpdateAnimation(void)
 //=====================================================
 void CBillboard::SetPos(D3DXVECTOR3 pos)
 {
-	m_Pos = pos;
+	m_pos = pos;
 
 	VERTEX_3D*pVtx = NULL;
 
@@ -305,11 +362,36 @@ void CBillboard::SetSizeBase(D3DXVECTOR3 sizeBase)
 }
 
 //=====================================================
+// 色の設定
+//=====================================================
+void CBillboard::SetColor(D3DXCOLOR color)
+{
+	// カラーの設定
+	m_color = color;
+}
+
+//=====================================================
+// 体力の設定
+//=====================================================
+void CBillboard::SetLife(int nLife)
+{
+	m_nLife = nLife;
+}
+
+//=====================================================
+// アルファテストの設定
+//=====================================================
+void CBillboard::SetAlpha(bool bAlpha)
+{
+	m_bAlpha = bAlpha;
+}
+
+//=====================================================
 // 位置の取得
 //=====================================================
 D3DXVECTOR3 CBillboard::GetPos(void)
 {
-	return m_Pos;
+	return m_pos;
 }
 
 //=====================================================
@@ -326,6 +408,14 @@ D3DXVECTOR3 CBillboard::GetMove(void)
 D3DXVECTOR3 CBillboard::GetSize(void)
 {
 	return m_size;
+}
+
+//=====================================================
+// 体力の設定
+//=====================================================
+int CBillboard::GetLIfe(void)
+{
+	return m_nLife;
 }
 
 //=====================================================

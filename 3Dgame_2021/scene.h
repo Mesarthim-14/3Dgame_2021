@@ -15,7 +15,9 @@
 //=============================================================================
 //マクロ定義
 //=============================================================================
-#define MAX_NUM 2056	//最大数
+#define MAX_NUM 4112
+
+//最大数
 
 //=============================================================================
 //オブジェクトクラス
@@ -30,63 +32,43 @@ public:
 	{
 		PRIORITY_0 = 0,
 		PRIORITY_1,
-		PRIORITY_PLAYER,
-		PRIORITY_ENEMY,
-		PRIORITY_MAX	//優先順位の最大数
+		PRIORITY_CHARACTER,	// キャラクター
+		PRIORITY_UI,		// UI
+		PRIORITY_EFFECT,	// エフェクト
+		PRIORITY_PARTICLE,	// エフェクト
+		PRIORITY_MAX		// 優先順位の最大数
 	}PRIORITY;
-	//=========================================================================
-	//列挙型
-	//=========================================================================
-	typedef enum
-	{
-		OBJTYPE_NONE = 0,
-		OBJTYPE_PLAYER,	//プレイヤータイプ
-		OBJTYPE_SPHERE,	//球タイプ
-		OBJTYPE_BULLET,	//バレットタイプ
-		OBJTYPE_MODEL,	// モデル
-		OBJTYPE_UI,
-		OBJTYPE_PAUSE,
-		OBJTYPE_MAX	//オブジェクトタイプの最大数
-	}OBJTYPE;	//オブジェクトタイプ
 
-	//=========================================================================
-	//メンバ関数宣言
-	//=========================================================================
-	CScene(int nPriority = PRIORITY_0);
-	virtual ~CScene();
-	static void ReleaseAll(void);
-	static void AllUpdate(void);
-	static void AllDraw(void);
+	CScene(PRIORITY Priority = PRIORITY_0);						// コンストラクタ
+	virtual ~CScene();											// デストラクタ
+	static void ReleaseAll(void);								// 全てのオブジェクトをリリース
+	static void UpdateAll(void);								// 全てのオブジェクトを更新
+	static void DrawAll(void);									// 全てのオブジェクトを描画
 
-	virtual HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 rot) = 0;
-	virtual void Uninit(void) = 0;
-	virtual void Update(void) = 0;
-	virtual void Draw(void) = 0;
+	virtual HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 rot) = 0;	// 初期化処理
+	virtual void Uninit(void) = 0;								// 終了処理
+	virtual void Update(void) = 0;								// 更新処理
+	virtual void Draw(void) = 0;								// 描画処理
 
-	void SetObjType(const OBJTYPE objtype);
-	OBJTYPE GetObjType(void)const;
-	CScene *GetNext(void);
-	static CScene *GetTop(int nNum);
-	static void SetPause(bool Pause);
+	CScene *GetTop(int nCount);									// シーンの情報受け取り
+	CScene *GetNext(void);										// 次の情報を受け取る
+	static void SetPause(bool Pause);							// ポーズの情報
+	void DeathRelease(void);									// 死亡フラグのリリース
 
 protected:
-	void SetDeathFlag(void);
-	void SetLateDraw(void);			// 描画を遅らせる
+	void Release(void);						// オブジェクトを開放
 private:
-	void ReConnectList(void);
 	//=========================================================================
-	//メンバ変数宣言
+	// メンバ変数宣言
 	//=========================================================================
 	static CScene *m_pTop[PRIORITY_MAX];	// 先頭のオブジェクトへのポインタ
 	static CScene *m_pCur[PRIORITY_MAX];	// 現在のオブジェクトへのポインタ
 	CScene *m_pPrev;						// 前のオブジェクトへのポインタ
 	CScene *m_pNext;						// 次のオブジェクトへのポインタ
-	int m_nPriority;						// 描画の優先順位
+	PRIORITY m_nPriority;					// 描画の優先順位
 	bool m_bDeath;							// 死亡フラグ
 	bool m_bLate;							// 描画を遅らせる処理
-
-	OBJTYPE m_ObjType;	//オブジェクトの種類
-	static bool m_bPause;
+	static bool m_bPause;					// ポーズの情報
 };
 
 #endif

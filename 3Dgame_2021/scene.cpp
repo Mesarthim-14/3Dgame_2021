@@ -22,10 +22,10 @@ bool CScene::m_bPause = false;
 //=============================================================================
 //オブジェクトクラスのデフォルトコンストラクタ
 //=============================================================================
-CScene::CScene(int nPriority)
+CScene::CScene(PRIORITY Priority)
 {
 	//プライオリティの設定
-	m_nPriority = nPriority;
+	m_nPriority = Priority;
 
 	//死亡フラグをfalseに設定する
 	m_bDeath = false;
@@ -68,7 +68,6 @@ CScene::CScene(int nPriority)
 	//自身の次情報をクリアする
 	m_pNext = NULL;
 
-	m_ObjType = OBJTYPE_NONE;
 }
 
 //=============================================================================
@@ -79,251 +78,144 @@ CScene::~CScene()
 }
 
 //=============================================================================
-//全ての終了処理
-//=============================================================================
-void CScene::ReleaseAll(void)
-{
-	for (int nCntPriority = 0; nCntPriority < PRIORITY_MAX; nCntPriority++)
-	{
-		//先頭オブジェクトの情報を取得
-		CScene *pScene = m_pTop[nCntPriority];
-
-		while (pScene)
-		{
-			//次情報の一時保存
-			CScene *pNext = pScene->m_pNext;
-
-			//終了処理呼び出し
-			pScene->Uninit();
-
-			//リストの再接続
-			pScene->ReConnectList();
-
-			//オブジェクト情報を次のものへ移行する
-			pScene = pNext;
-		}
-	}
-}
-
-//=============================================================================
 //全ての更新処理
 //=============================================================================
-void CScene::AllUpdate(void)
+void CScene::UpdateAll(void)
 {
-	 //ポーズしているか　bool pause = m_pause   ->>  pause =true ->> if (type == OBJTYPE_PAUSE)
-	
-		//更新処理
-		for (int nCntPriority = 0; nCntPriority < PRIORITY_MAX; nCntPriority++)
-		{
-			//先頭オブジェクトの情報を取得
-			CScene *pScene = m_pTop[nCntPriority];
-
-			while (pScene)
-			{
-				//次情報の一時保存
-				CScene *pNext = pScene->m_pNext;
-				if (m_bPause == false || pScene->GetObjType() == OBJTYPE_PAUSE)
-				{
-					if (!pScene->m_bDeath)
-					{
-						//更新処理呼び出し
-						pScene->Update();
-					}
-				}
-				//オブジェクト情報を次のものへ移行
-				pScene = pNext;
-
-			}
-		}
-	
-	for (int nCntPriority = 0; nCntPriority < PRIORITY_MAX; nCntPriority++)
+	//ポーズしているか　bool pause = m_pause   ->>  pause =true ->> if (type == OBJTYPE_PAUSE)
+	for (int nCount = 0; nCount < PRIORITY_MAX; nCount++)
 	{
-		//先頭オブジェクトの情報を取得
-		CScene *pScene = m_pTop[nCntPriority];
-
-		while (pScene)
+		if (m_pTop[nCount] != NULL)
 		{
-			//次情報の一時保存
-			CScene *pNext = pScene->m_pNext;
+			CScene *pScene = m_pTop[nCount];
 
-			if (pScene->m_bDeath == true)
+			do
 			{
-				//リストの再接続
-				pScene->ReConnectList();
-			}
+				CScene *pSceneCur = pScene->m_pNext;
 
-			//オブジェクト情報を次のものへ移行
-			pScene = pNext;
+				// 死亡フラグがないとき
+				if (pScene->m_bDeath != true)
+				{
+					// 更新処理
+					pScene->Update();
+				}
+				pScene = pSceneCur;
+
+			} while (pScene != NULL);
 		}
 	}
 
-	////最大ポリゴン数分繰り返す
-	//for (int nCntScene = 0; nCntScene < MAX_NUM; nCntScene++)
-	//{
-	//	CScene *pScene = GetScene(nCntScene);
+	for (int nCount = 0; nCount < PRIORITY_MAX; nCount++)
+	{
+		if (m_pTop[nCount] != NULL)
+		{
+			CScene *pScene = m_pTop[nCount];
 
-	//	if (pScene != NULL)
-	//	{
-	//		// それぞれのタイプ
-	//		OBJTYPE type = pScene->GetObjType();
+			do
+			{
+				CScene *pSceneCur = pScene->m_pNext;
 
-	//		// ポーズしているか　bool pause = m_pause   ->>  pause =true ->> if (type == OBJTYPE_PAUSE)
-	//		if (m_bPause == false || type == OBJTYPE_PAUSE)
-	//		{
-	//			//メモリが確保できていたら
-	//			if (m_apScene[nCntScene] != NULL)
-	//			{
-	//				//更新処理呼び出し
-	//				m_apScene[nCntScene]->Update();
-	//			}
-	//		}
-	//	}
-	//}
+				if (pScene->m_bDeath == true)
+				{
+					// 死亡フラグの処理
+					pScene->DeathRelease();
+				}
+
+				pScene = pSceneCur;
+
+			} while (pScene != NULL);
+		}
+	}
 }
-
 
 //=============================================================================
 //全ての描画処理
 //=============================================================================
-void CScene::AllDraw(void)
+void CScene::DrawAll(void)
 {
-	for (int nCntPriority = 0; nCntPriority < PRIORITY_MAX; nCntPriority++)
+	for (int nCount = 0; nCount < PRIORITY_MAX; nCount++)
 	{
-		//先頭オブジェクトの情報を取得
-		CScene *pScene = m_pTop[nCntPriority];
-
-		while (pScene)
+		if (m_pTop[nCount] != NULL)
 		{
-			//次情報の一時保存
-			CScene *pNext = pScene->m_pNext;
-
-			if (pScene->m_bDeath == false)
+			CScene *pScene = m_pTop[nCount];
+			do
 			{
-				if (pScene->m_bLate == false)
+				CScene *pSceneCur = pScene->m_pNext;
+
+				// 死亡フラグがない時
+				if (pScene->m_bDeath != true)
 				{
-					//描画処理の呼び出し
 					pScene->Draw();
 				}
-			}
-			//オブジェクト情報を次のものへ移行する
-			pScene = pScene->m_pNext;
+
+				pScene = pSceneCur;
+
+			} while (pScene != NULL);
 		}
 	}
-
-	//for (int nCntPriority = 0; nCntPriority < PRIORITY_MAX; nCntPriority++)
-	//{
-	//	//先頭オブジェクトの情報を取得
-	//	CScene *pScene = m_pTop[nCntPriority];
-
-	//	while (pScene)
-	//	{
-	//		//次情報の一時保存
-	//		CScene *pNext = pScene->m_pNext;
-
-	//		if (pScene->m_bDeath == false)
-	//		{
-	//			if (pScene->m_bLate == true)
-	//			{
-	//				//描画処理の呼び出し
-	//				pScene->Draw();
-	//			}
-	//		}
-	//		//オブジェクト情報を次のものへ移行する
-	//		pScene = pScene->m_pNext;
-	//	}
-	//}
-
-	for (int nCntPriority = 0; nCntPriority < PRIORITY_MAX; nCntPriority++)
-	{
-		// 末端オブジェクトの情報を取得
-		CScene *pScene = m_pCur[nCntPriority];
-
-		while (pScene)
-		{
-			//次情報の一時保存
-			CScene *pPrev = pScene->m_pPrev;
-
-			if (pScene->m_bDeath == false)
-			{
-				if (pScene->m_bLate == true)
-				{
-					//描画処理の呼び出し
-					pScene->Draw();
-				}
-			}
-			//オブジェクト情報を次のものへ移行する
-			pScene = pScene->m_pPrev;
-		}
-	}
-
 }
 
 //=============================================================================
-// 削除フラグ処理
+//全ての終了処理
 //=============================================================================
-void CScene::SetDeathFlag(void)
+void CScene::ReleaseAll(void)
 {
-	//死亡フラグをtrueにする
+	for (int nCount = 0; nCount < PRIORITY_MAX; nCount++)
+	{
+		CScene *pScene = m_pTop[nCount];
+		while (pScene != NULL)
+		{
+			CScene *pCurScene = pScene->m_pNext;
+
+			pScene->Uninit();
+
+			pScene = pCurScene;
+		}
+	}
+}
+
+//=============================================================================
+// 単数リリース
+//=============================================================================
+void CScene::Release()
+{
+	// 死亡フラグ
 	m_bDeath = true;
 }
 
 //=============================================================================
-// 描画を遅らせるフラグ設定
+// 死亡フラグを持ったやつのリリース
 //=============================================================================
-void CScene::SetLateDraw(void)
+void CScene::DeathRelease(void)
 {
-	m_bLate = true;
-}
-
-void CScene::ReConnectList(void)
-{
-	//自身が先頭オブジェクトだった場合
-	if (this == m_pTop[m_nPriority])
+	// 位置をずらす
+	for (int nCount = 0; nCount < PRIORITY_MAX; nCount++)
 	{
-		//自身が持つ次のオブジェクト情報をを先頭に指定する
-		m_pTop[m_nPriority] = m_pNext;
+		// 先頭だったら
+		if (m_pTop[nCount] == this)
+		{
+			// 先頭を次のオブジェクトにする
+			m_pTop[nCount] = m_pNext;
+		}
+
+		// 最後だったら
+		if (m_pCur[nCount] == this)
+		{
+			// 最後をその前のオブジェクトにする
+			m_pCur[nCount] = m_pPrev;
+		}
+
+		if (m_pPrev != NULL)
+		{
+			m_pPrev->m_pNext = m_pNext;
+		}
+		if (m_pNext != NULL)
+		{
+			m_pNext->m_pPrev = m_pPrev;
+		}
 	}
 
-	//自身が現在オブジェクトだった場合
-	if (this == m_pCur[m_nPriority])
-	{
-		//自身が持つ前のオブジェクト情報を現在に指定する
-		m_pCur[m_nPriority] = m_pPrev;
-	}
-
-	//前情報を持っているなら
-	if (m_pPrev)
-	{
-		//前のオブジェクトの次情報に自身の次情報を渡す
-		m_pPrev->m_pNext = m_pNext;
-	}
-
-	//次情報を持っているなら
-	if (m_pNext)
-	{
-		//次のオブジェクトの前情報に自身の前情報を渡す
-		m_pNext->m_pPrev = m_pPrev;
-	}
-
-	//メモリの削除
 	delete this;
-}
-
-//=============================================================================
-//オブジェクトタイプ設定処理
-//=============================================================================
-void CScene::SetObjType(const OBJTYPE objtype)
-{
-	//メモリが確保できていたら
-	this->m_ObjType = objtype;
-}
-
-//=============================================================================
-//オブジェクトタイプ情報取得処理
-//=============================================================================
-CScene::OBJTYPE CScene::GetObjType(void)const
-{
-	return this->m_ObjType;
 }
 
 CScene * CScene::GetNext(void)

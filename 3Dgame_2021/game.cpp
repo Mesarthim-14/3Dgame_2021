@@ -24,6 +24,9 @@
 #include "fire.h"
 #include "enemy.h"
 #include "life_frame.h"
+#include "life_bar.h"
+#include "crab.h"
+#include "quest_logo.h"
 
 //=======================================================================================
 // マクロ定義
@@ -39,14 +42,14 @@ CBg *CGame::m_pBg = NULL;
 CPlayer *CGame::m_pPlayer = NULL;
 CPause *CGame::m_pPause = NULL;
 CSea *CGame::m_pSea = NULL;
-CLifeFrame *CGame::m_pLifeFrame = NULL;
 
 //=======================================================================================
 // コンストラクタ
 //=======================================================================================
-CGame::CGame(int nPriority) : CScene(nPriority)
+CGame::CGame(PRIORITY Priority) : CScene(Priority)
 {
 	m_bGameEnd = false;
+	m_nTimeCounter = 0;
 }
 
 //=======================================================================================
@@ -111,13 +114,8 @@ HRESULT CGame::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 		m_pBg = CBg::Create();
 	}
 
-	// ライフの枠
-	if (m_pLifeFrame == NULL)
-	{
-		m_pLifeFrame = CLifeFrame::Create();
-	}
-
-	CEnemy::Create(D3DXVECTOR3(0.0f, 0.0f, -500.0f), D3DXVECTOR3(ENEMY_SIZE_X, ENEMY_SIZE_Y, ENEMY_SIZE_Z));
+	// 蟹の生成
+	CCrab::Create(D3DXVECTOR3(0.0f, 0.0f, 1000.0f), D3DXVECTOR3(0.0f, 0.0f, 0.0f));
 
 	//BGM
 	CSound *pSound = CManager::GetSound();
@@ -138,7 +136,6 @@ HRESULT CGame::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 //=======================================================================================
 void CGame::Uninit(void)
 {
-
 	if (m_pCamera != NULL)
 	{
 		//カメラクラスの終了処理呼び出す
@@ -151,20 +148,12 @@ void CGame::Uninit(void)
 		m_pCamera = NULL;
 	}
 
-	// ライフの枠
-	if (m_pLifeFrame != NULL)
-	{
-		//メモリのクリア
-		m_pLifeFrame = NULL;
-	}
-
 	// メッシュフィールド
 	if (m_pMeshField != NULL)
 	{
 		m_pMeshField->Uninit();
 		m_pMeshField = NULL;
 	}
-
 
 	// 背景
 	if (m_pBg != NULL)
@@ -184,7 +173,6 @@ void CGame::Uninit(void)
 	// プレイヤーの終了処理
 	if (m_pPlayer != NULL)
 	{
-		m_pPlayer->Uninit();
 		m_pPlayer = NULL;
 	}
 
@@ -195,7 +183,7 @@ void CGame::Uninit(void)
 	pSound->Stop(CSound::SOUND_LABEL_BGM_GAME);
 
 	//オブジェクトの破棄
-	SetDeathFlag();
+	Release();
 }
 
 //=======================================================================================
@@ -218,11 +206,12 @@ void CGame::Update(void)
 	for (int nCount = 0; nCount < FIRE_NUM; nCount++)
 	{
 		// 炎の生成
-		CFire::Create(D3DXVECTOR3(0.0f, 0.0f, 0.0f), D3DXVECTOR3(FIRE_SIZE_X, FIRE_SIZE_Y, 0.0f), FIRE_LIFE);
+	//	CFire::Create(D3DXVECTOR3(0.0f, 0.0f, 0.0f), D3DXVECTOR3(FIRE_SIZE_X, FIRE_SIZE_Y, 0.0f), FIRE_LIFE);
 	}
 
 	// ゲームの設定
 	SetGame();
+
 }
 
 //=======================================================================================
@@ -246,8 +235,6 @@ void CGame::Draw(void)
 	{
 		m_pLight->ShowLightInfo();
 	}
-
-
 }
 
 //=======================================================================================
@@ -255,7 +242,13 @@ void CGame::Draw(void)
 //=======================================================================================
 void CGame::SetGame(void)
 {
+	m_nTimeCounter++;
 
+	// クエストロゴ生成
+	if (m_nTimeCounter == 60)
+	{
+		CQuestLogo::Create();
+	}
 }
 
 
@@ -289,9 +282,4 @@ CPlayer * CGame::GetPlayer(void)
 CPause * CGame::GetPause(void)
 {
 	return m_pPause;
-}
-
-CLifeFrame * CGame::GetLifeFrame(void)
-{
-	return m_pLifeFrame;
 }

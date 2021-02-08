@@ -130,6 +130,7 @@ void CFade::Update(void)
 					CManager::SetMode(m_modeNext);
 				}
 			}
+
 			//“§–¾“x‚ÌÝ’è
 			m_pPolygon->SetColor(m_colorFade);
 		}

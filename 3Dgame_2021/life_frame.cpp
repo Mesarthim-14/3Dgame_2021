@@ -16,13 +16,10 @@
 //=============================================================================
 // マクロ定義
 //=============================================================================
-#define LIFE_FRAME_POS	(D3DXVECTOR3(SCREEN_WIDTH / 2, 600.0f, 0.0f))
-#define LIFE_FRAME_SIZE	(D3DXVECTOR3(350.0f, 7.0f, 0.0f))
-
 //=============================================================================
 // コンストラクタ
 //=============================================================================
-CLifeFrame::CLifeFrame()
+CLifeFrame::CLifeFrame(PRIORITY Priority) : CUi(Priority)
 {
 
 }
@@ -38,27 +35,25 @@ CLifeFrame::~CLifeFrame()
 //=============================================================================
 // オブジェクト生成
 //=============================================================================
-CLifeFrame *CLifeFrame::Create(void)
+CLifeFrame *CLifeFrame::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
 	// メモ位確保
 	CLifeFrame *pLifeFrame = new CLifeFrame;
 
 	// 初期化処理
-	pLifeFrame->Init();
+	pLifeFrame->Init(pos, size);
 
 	return S_OK;
 }
 
-
 //=============================================================================
 // 初期化処理
 //=============================================================================
-HRESULT CLifeFrame::Init(void)
+HRESULT CLifeFrame::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
 	// 初期化処理
-	CUi::Init(LIFE_FRAME_POS, LIFE_FRAME_SIZE);
-	SetObjType(OBJTYPE_UI);
-	BindTexture(CTexture::GetTexture(CTexture::TEXTURE_NUM_LIFEBAR));
+	CUi::Init(pos, size);
+	BindTexture(CTexture::GetTexture(CTexture::TEXTURE_NUM_GAGEFLAME));
 
 	return S_OK;
 }

@@ -86,11 +86,6 @@ HRESULT CCamera::Init(void)
 	m_posV.y = m_posR.z + m_fDistance* cosf(m_fθ);					//カメラ位置Y
 	m_posV.z = m_posR.y + m_fDistance* sinf(m_fθ) * cosf(m_fφ);	//カメラ位置Z
 
-	// 距離
-	//m_fDistance = sqrtf(
-	//	powf((m_posV.x - m_posR.x), DISTANCE) +
-	//	powf((m_posV.z - m_posR.z), DISTANCE));
-
 	return S_OK;
 }
 
@@ -157,9 +152,9 @@ void CCamera::NomalUpdate(D3DXVECTOR3 PlayerPos, D3DXVECTOR3 PlayerRot)
 		m_fθ += STICK_INPUT_CONVERSION;
 	}
 
-	m_posVDest.x = PlayerPos.x + m_fDistance * sinf(m_fθ) * sinf(m_fφ);	//カメラ位置X設定
-	m_posVDest.y = PlayerPos.y + PLAYER_HEIGHT + m_fDistance * cosf(m_fθ);				//カメラ位置Y設定
-	m_posVDest.z = PlayerPos.z + m_fDistance * sinf(m_fθ) * cosf(m_fφ);	//カメラ位置Z設定
+	m_posVDest.x = PlayerPos.x + m_fDistance * sinf(m_fθ) * sinf(m_fφ);	// カメラ位置X設定
+	m_posVDest.y = PlayerPos.y + PLAYER_HEIGHT + m_fDistance * cosf(m_fθ);	// カメラ位置Y設定
+	m_posVDest.z = PlayerPos.z + m_fDistance * sinf(m_fθ) * cosf(m_fφ);	// カメラ位置Z設定
 
 	m_posRDest = D3DXVECTOR3(PlayerPos.x, PlayerPos.y + PLAYER_HEIGHT, PlayerPos.z);	//注視点設定
 

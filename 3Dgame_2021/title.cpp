@@ -1,6 +1,6 @@
 //=======================================================================================
 //
-// 背景描画処理 [bg.cpp]
+// タイトルクラスの処理 [title.cpp]
 // Author : Konishi Yuuto
 //
 //=======================================================================================
@@ -15,6 +15,7 @@
 #include "manager.h"
 #include "renderer.h"
 #include "fade.h"
+#include "title_bg.h"
 #include "titlelogo.h"
 #include "sound.h"
 #include "joypad.h"
@@ -22,16 +23,14 @@
 //=======================================================================================
 //静的メンバ変数宣言
 //=======================================================================================
-LPDIRECT3DTEXTURE9 CTitle::m_pTexture[1] = {};
-CTitlelogo *CTitle::m_apTitlelogo[MAX_TITLE] = {};
+CTitleBg *CTitle::m_pTitleBg = NULL;
+CTitlelogo *CTitle::m_pTitlelogo = NULL;
 
 //=======================================================================================
 // タイトルクラスのコンストラクタ
 //=======================================================================================
-CTitle::CTitle(int nPriority) : CScene(nPriority)
+CTitle::CTitle(PRIORITY Priority) : CScene(Priority)
 {
-	m_pScene = NULL;
-	m_bModechenge = false;
 }
 
 //=======================================================================================
@@ -39,10 +38,7 @@ CTitle::CTitle(int nPriority) : CScene(nPriority)
 //=======================================================================================
 CTitle::~CTitle()
 {
-	for (int nCount = 0; nCount < MAX_TITLE; nCount++)
-	{
-		m_apTitlelogo[nCount] = NULL;
-	}
+
 }
 
 //=======================================================================================
@@ -50,24 +46,17 @@ CTitle::~CTitle()
 //=======================================================================================
 CTitle* CTitle::Create(void)
 {
-	CTitle* pTitle = new CTitle();
+	// メモリ確保
+	CTitle* pTitle = new CTitle;
 
-	pTitle->Init(D3DXVECTOR3(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.0f), D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f));
+	if (pTitle != NULL)
+	{
+		// 初期化処理
+		pTitle->Init(D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f),
+			D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f));
+	}
 
 	return pTitle;
-}
-
-//=======================================================================================
-// タイトルクラスのテクスチャ読み込み処理
-//=======================================================================================
-HRESULT CTitle::Load(void)
-{
-	//デバイスの取得
-	LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
-
-	//テクスチャの読み込み
-	D3DXCreateTextureFromFile(pDevice, "data/Texture/bg001.png", &m_pTexture[0]);
-		return S_OK;
 }
 
 //=======================================================================================
@@ -78,50 +67,23 @@ HRESULT CTitle::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 	//デバイスの取得
 	LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
 
-	// ビューポートの設定
-	D3DVIEWPORT9 view_port;
-
-	// ビューポートの左上座標
-	view_port.X = 0;
-	view_port.Y = 0;
-
-	// ビューポートの幅
-	view_port.Width = SCREEN_WIDTH;
-
-	// ビューポートの高さ
-	view_port.Height = SCREEN_HEIGHT;
-
-	// ビューポート深度設定
-	view_port.MinZ = 0.0f;
-	view_port.MaxZ = 1.0f;
-
-	// ビューポート設定
-	if (FAILED(pDevice->SetViewport(&view_port)))
+	// タイトル背景の処理
+	if (m_pTitleBg == NULL)
 	{
-		return E_FAIL;
+		// オブジェクト生成
+		m_pTitleBg = CTitleBg::Create(TITLE_BG_POS, TITLE_BG_SIZE);
 	}
 
-	if (m_pScene == NULL)
-	{
-		m_pScene = CScene2D::Create(D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f), D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f));
+	//// タイトルロゴの処理
+	//if (m_pTitlelogo == NULL)
+	//{
+	//	// オブジェクト生成
+	//	m_pTitlelogo = CTitlelogo::Create(
+	//		D3DXVECTOR3(TITLE_UI_POS_X, TITLE_UI_POS_Y, 0.0f), 
+	//		D3DXVECTOR3(TITLE_UI_SIZE, TITLE_UI_SIZE, 0.0f));
+	//}
 
-		//テクスチャの設定
-		m_pScene->BindTexture(m_pTexture[0]);
-	}
-	
-	if (m_apTitlelogo[0] == NULL)
-	{
-		m_apTitlelogo[0] = CTitlelogo::Create(D3DXVECTOR3(TITLE_UI_POS_X, TITLE_UI_POS_Y, 0.0f), D3DXVECTOR3(TITLE_UI_SIZE, TITLE_UI_SIZE, 0.0f), CTitlelogo::LOGOTIPE_UI);
-	}
-	if (m_apTitlelogo[1] == NULL)
-	{
-		m_apTitlelogo[1] = CTitlelogo::Create(D3DXVECTOR3(TITLE_PLESS_POS_X, TITLE_PLESS_POS_Y, 0.0f), D3DXVECTOR3(TITLE_PLESS_SIZE_X, TITLE_PLESS_SIZE_Y, 0.0f), CTitlelogo::LOGOTIPE_PRESS);
-	}
-	if (m_apTitlelogo[2] == NULL)
-	{
-		m_apTitlelogo[2] = CTitlelogo::Create(D3DXVECTOR3(TITLE_POS_X, TITLE_POS_Y, 0.0f), D3DXVECTOR3(TITLE_SIZE_X, TITLE_SIZE_Y, 0.0f), CTitlelogo::LOGOTIPE_TITLE);
-	}
-
+	// サウンドの情報
 	CSound *pSound = CManager::GetSound();
 	pSound->Play(CSound::SOUND_LABEL_BGM_TITLE);
 
@@ -133,27 +95,26 @@ HRESULT CTitle::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 //=======================================================================================
 void CTitle::Uninit(void)
 {
-
-	for (int nCount = 0; nCount < TITLELOGO_TYPE; nCount++)
+	// タイトルロゴの処理
+	if (m_pTitlelogo != NULL)
 	{
-		if (m_apTitlelogo[nCount] != NULL)
-		{
-			m_apTitlelogo[nCount]->Uninit();
-			m_apTitlelogo[nCount] = NULL;
-		}
+		// 終了処理
+		m_pTitlelogo = NULL;
 	}
 
-	if (m_pScene != NULL)
+	// タイトル背景の処理
+	if (m_pTitleBg != NULL)
 	{
-		m_pScene->Uninit();
+		// オブジェクト生成
+		m_pTitleBg = NULL;
 	}
 
 	//BGMを止める処理
 	CSound *pSound = CManager::GetSound();
-	//pSound->Stop(CSound::SOUND_LABEL_BGM_TITLE);
+	pSound->Stop(CSound::SOUND_LABEL_BGM_TITLE);
 
 	//オブジェクトの破棄
-	SetDeathFlag();
+	Release();
 }
 
 //=======================================================================================
@@ -173,14 +134,6 @@ void CTitle::Update(void)
 		pFade->SetFade(CManager::MODE_TYPE_TUTORIAL);
 		pSound->Play(CSound::SOUND_LABEL_SE_START);
 	}
-
-
-	//エンターキーを押したとき
-	/*if (pKey->GetTrigger(DIK_RETURN) && mode == CFade::FADE_MODE_NONE)
-	{
-		CFade *pFade = CManager::GetFade();
-		pFade->SetFade(CManager::MODE_TYPE_TUTORIAL);
-	}*/
 }
 
 //=======================================================================================

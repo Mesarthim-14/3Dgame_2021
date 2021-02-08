@@ -11,11 +11,12 @@
 // インクルードファイル
 //=============================================================================
 #include "scene.h"
+#include "xfile.h"
 
 //=============================================================================
 // マクロ定義
 //=============================================================================
-#define MAX_MODEL_TEXTURE		(128)
+#define MAX_MODEL_TEXTURE	(256)		// テクスチャの最大数
 
 //=============================================================================
 // モデルクラス
@@ -23,15 +24,6 @@
 class CModel : public CScene
 {
 public:
-	typedef struct
-	{
-		char xFileName[1024];								// ファイルネーム
-		LPD3DXMESH pMesh;									// メッシュ情報へのポインタ
-		LPD3DXBUFFER pBuffMat;								// マテリアル情報へのポインタ
-		DWORD dwNumMat;										// マテリアル情報の数
-		LPDIRECT3DTEXTURE9 m_apTexture[MAX_MODEL_TEXTURE];	// テクスチャの数
-	}MODEL;
-
 	typedef enum
 	{
 		MODEL_TYPE_NONE = 0,	// 初期値
@@ -45,45 +37,48 @@ public:
 	//=========================================================================
 	//メンバ関数宣言
 	//=========================================================================
-	CModel(int nPriority = PRIORITY_0);
+	CModel(PRIORITY Priority = PRIORITY_EFFECT);
 	~CModel();
 
-	static CModel *Create(D3DXVECTOR3 pos, const D3DXVECTOR3 size);
+	static CModel *Create(D3DXVECTOR3 pos, D3DXVECTOR3 size);
 
 	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);
 	void Uninit(void);
 	void Update(void);
 	void Draw(void);
-	void BindModel(MODEL model);
-	void BindTexture(LPDIRECT3DTEXTURE9 pTexture);
+	void BindModel(CXfile::MODEL model);
+	void BindTexture(LPDIRECT3DTEXTURE9 *pTexture);
 	void BindTexturePointer(LPDIRECT3DTEXTURE9 *ppTexture);
-	LPD3DXMESH GetMesh(void)const;
-	LPD3DXBUFFER GetBuffMat(void)const;	//
 
+	// Set関数
 	void SetPos(const D3DXVECTOR3 pos);
-	D3DXVECTOR3 GetPos(void)const;
-
 	void SetRot(const D3DXVECTOR3 rot);		// 座標の情報
 	D3DXVECTOR3 GetRot(void);
 	void SetType(MODEL_TYPE Mtype);
 	void SetSize(D3DXVECTOR3 size);
+	void SetTexPattern(int TexPattern);		// テクスチャのパターン
+
+	// Get関数
+	D3DXVECTOR3 GetPos(void)const;
 	D3DXVECTOR3 GetSize(void);
-	LPD3DXBUFFER GetBuffMat(void);
 	MODEL_TYPE GetType(void);
 	D3DXMATRIX GetMtxWorld(void);
+	LPD3DXMESH GetMesh(void)const;
+	LPD3DXBUFFER GetBuffMat(void);
+	DWORD GetNumMat(void);
+	int GetTexPattern(void);
 private:
 	//=========================================================================
 	//メンバ変数宣言
 	//=========================================================================
-	LPDIRECT3DTEXTURE9 m_pTexture;
+//	LPDIRECT3DTEXTURE9 m_apTexture[MAX_MODEL_TEXTURE];
 	LPDIRECT3DTEXTURE9 *m_apTexture;
-	LPD3DXMESH m_pMesh;			// メッシュ情報へのポインタ
-	LPD3DXBUFFER m_pBuffMat;	// マテリアル情報へのポインタ
-	DWORD m_nNumMat;			// マテリアル情報の数
-	D3DXVECTOR3 m_pos;			// 位置
-	D3DXVECTOR3 m_rot;			// 向き
-	D3DXVECTOR3 m_size;			// サイズ
-	D3DXMATRIX m_mtxWorld;		// ワールドマトリックス
-	MODEL_TYPE m_type;			// 種類
+	D3DXVECTOR3 m_pos;					// 位置
+	D3DXVECTOR3 m_rot;					// 向き
+	D3DXVECTOR3 m_size;					// サイズ
+	D3DXMATRIX m_mtxWorld;				// ワールドマトリックス
+	MODEL_TYPE m_type;					// 種類
+	CXfile::MODEL m_Model;				// モデルの構造体
+	int m_nTexPattern;						// テクスチャのパターン数
 };
 #endif 

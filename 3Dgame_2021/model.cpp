@@ -1,7 +1,7 @@
 //=============================================================================
 //
 // モデル処理 [model.cpp]
-// Author : 山田陵太
+// Author : Konishi Yuuto
 //
 //=============================================================================
 
@@ -13,22 +13,21 @@
 #include "renderer.h"
 #include "player.h"
 #include "game.h"
+#include "xfile.h"
 
 //=============================================================================
 //モデルクラスのコンストラクタ
 //=============================================================================
-CModel::CModel(int nPriority) : CScene(nPriority)
+CModel::CModel(PRIORITY Priority) : CScene(Priority)
 {
-	m_pBuffMat = NULL;
-	m_pMesh = NULL;
-	m_nNumMat = 0;
 	m_pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
 	m_rot = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
 	m_size = D3DXVECTOR3(1.0f, 1.0f, 1.0f);
 	m_type = MODEL_TYPE_NONE;
-	m_pTexture = NULL;
-	//memset(m_apTexture, 0, sizeof(m_apTexture));
+//	memset(m_apTexture, 0, sizeof(m_apTexture));
 	m_apTexture = NULL;
+//m_apTexture = NULL;
+	m_nTexPattern = 0;
 }
 
 //=============================================================================
@@ -41,7 +40,7 @@ CModel::~CModel()
 //=============================================================================
 //モデルクラスのクリエイト処理
 //=============================================================================
-CModel * CModel::Create(D3DXVECTOR3 pos, const D3DXVECTOR3 size)
+CModel * CModel::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
 	//モデルクラスのポインタ変数
 	CModel *pModel = NULL;
@@ -67,7 +66,7 @@ CModel * CModel::Create(D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 //=============================================================================
 //モデルクラスの初期化処理
 //=============================================================================
-HRESULT CModel::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
+HRESULT CModel::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
 	// デバイス情報の取得
 	LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
@@ -100,7 +99,7 @@ void CModel::Uninit(void)
 	//}
 
 	//オブジェクトの破棄
-	SetDeathFlag();
+	Release();
 }
 
 //=============================================================================
@@ -145,9 +144,9 @@ void CModel::Draw(void)
 	pDevice->GetMaterial(&matDef);
 
 	//マテリアルデータへのポインタを取得
-	pMat = (D3DXMATERIAL*)m_pBuffMat->GetBufferPointer();
+	pMat = (D3DXMATERIAL*)m_Model.pBuffMat->GetBufferPointer();
 
-	for (int nCntMat = 0; nCntMat < (int)m_nNumMat; nCntMat++)
+	for (int nCntMat = 0; nCntMat < (int)m_Model.dwNumMat; nCntMat++)
 	{
 		//マテリアルのアンビエントにディフューズカラーを設定
 		pMat[nCntMat].MatD3D.Ambient = pMat[nCntMat].MatD3D.Diffuse;
@@ -155,28 +154,21 @@ void CModel::Draw(void)
 		//マテリアルの設定
 		pDevice->SetMaterial(&pMat[nCntMat].MatD3D);
 
-		//建物オブジェクトの場合
-		if (m_type == MODEL_TYPE_OBJECT)
+		if (m_apTexture[nCntMat] != NULL)
 		{
+			// テクスチャの設定
 			pDevice->SetTexture(0, m_apTexture[nCntMat]);
 		}
 		else
 		{
-			pDevice->SetTexture(0, m_pTexture);
+			pDevice->SetTexture(0, NULL);
 		}
 		
-
 		//モデルパーツの描画
-		m_pMesh->DrawSubset(nCntMat);
+		m_Model.pMesh->DrawSubset(nCntMat);
 
-		if (m_type == MODEL_TYPE_OBJECT)
-		{
-			pDevice->SetTexture(0, NULL);
-		}
-		else
-		{
-			pDevice->SetTexture(0, NULL);
-		}
+		pDevice->SetTexture(0, NULL);
+
 		// 透明度戻す
 		pMat[nCntMat].MatD3D.Diffuse.a = 1.0f;
 	}
@@ -185,24 +177,24 @@ void CModel::Draw(void)
 	pDevice->SetMaterial(&matDef);
 }
 
-void CModel::BindModel(MODEL model)
+void CModel::BindModel(CXfile::MODEL model)
 {
-	m_pMesh = model.pMesh;
-	m_pBuffMat = model.pBuffMat;
-	m_nNumMat = model.dwNumMat;
+	m_Model.pMesh = model.pMesh;
+	m_Model.pBuffMat = model.pBuffMat;
+	m_Model.dwNumMat = model.dwNumMat;
 }
 
 //=============================================================================
 // テクスチャの設定
 //=============================================================================
-void CModel::BindTexture(LPDIRECT3DTEXTURE9 pTexture)
+void CModel::BindTexture(LPDIRECT3DTEXTURE9 *pTexture)
 {
-	m_pTexture = pTexture;
+	m_apTexture = pTexture;
 }
 
 void CModel::BindTexturePointer(LPDIRECT3DTEXTURE9 *ppTexture)
 {
-	m_apTexture = ppTexture;
+//	m_apTexture = ppTexture;
 }
 
 //=============================================================================
@@ -210,12 +202,22 @@ void CModel::BindTexturePointer(LPDIRECT3DTEXTURE9 *ppTexture)
 //=============================================================================
 LPD3DXMESH CModel::GetMesh(void) const
 {
-	return m_pMesh;
+	return m_Model.pMesh;
 }
 
-LPD3DXBUFFER CModel::GetBuffMat(void) const
+LPD3DXBUFFER CModel::GetBuffMat(void)
 {
-	return m_pBuffMat;
+	return m_Model.pBuffMat;
+}
+
+DWORD CModel::GetNumMat(void)
+{
+	return m_Model.dwNumMat;
+}
+
+int CModel::GetTexPattern(void)
+{
+	return m_nTexPattern;
 }
 
 //=============================================================================
@@ -267,16 +269,19 @@ void CModel::SetSize(D3DXVECTOR3 size)
 }
 
 //=============================================================================
+// テクスチャのパターン設定
+//=============================================================================
+void CModel::SetTexPattern(int TexPattern)
+{
+	m_nTexPattern = TexPattern;
+}
+
+//=============================================================================
 // サイズの情報
 //=============================================================================
 D3DXVECTOR3 CModel::GetSize(void)
 {
 	return m_size;
-}
-
-LPD3DXBUFFER CModel::GetBuffMat(void)
-{
-	return m_pBuffMat;
 }
 
 CModel::MODEL_TYPE CModel::GetType(void)

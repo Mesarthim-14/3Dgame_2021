@@ -15,8 +15,6 @@
 //***************************************************************************************
 // マクロ定義
 //***************************************************************************************
-#ifdef VIIEW_PORT_TEST
-#endif // VIIEW_PORT_TEST
 #define MAX_PLAYER (1)			// プレイヤーの数
 
 //***************************************************************************************
@@ -29,7 +27,6 @@ class CBg;
 class CPlayer;
 class CPause;
 class CSea;
-class CLifeFrame;
 
 //***************************************************************************************
 // インクルードファイル
@@ -37,7 +34,7 @@ class CLifeFrame;
 class CGame : public CScene
 {
 public:
-	CGame(int nPriority = PRIORITY_0);	// コンストラクタ
+	CGame(PRIORITY Priority = PRIORITY_0);	// コンストラクタ
 	~CGame();							// デストラクタ
 
 	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);	// 初期化処理
@@ -51,7 +48,6 @@ public:
 	static CLight *GetLight(void);									// ライトのポインタ情報
 	static CPlayer *GetPlayer(void);								// プレイヤーのポインタ情報
 	static CPause *GetPause(void);									// ポーズ画面のポインタ情報
-	static CLifeFrame *GetLifeFrame(void);							// ライフの枠
 private:	
 	static CCamera *m_pCamera;					// カメラのポインタ	
 	static CLight *m_pLight;					// ライトのポインタ
@@ -60,8 +56,8 @@ private:
 	static CPlayer *m_pPlayer;					// プレイヤーのポインタ
 	static CSea *m_pSea;						// 海のポインタ
 	static CPause *m_pPause;					// ポーズのポインタ
-	static CLifeFrame *m_pLifeFrame;			// ライフの枠
 	LPD3DXFONT m_pFont;							// デバック用フォント
+	int m_nTimeCounter;							// ゲームのカウンター
 	bool m_bGameEnd;							// ゲームのエンドフラグ
 };
 #endif

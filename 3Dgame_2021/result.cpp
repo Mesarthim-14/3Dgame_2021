@@ -20,7 +20,7 @@ LPDIRECT3DTEXTURE9 CResult::m_pTexture[2] = {};
 //=============================================================================
 //リザルトクラスのコンストラクタ
 //=============================================================================
-CResult::CResult(int nPriority) : CScene(nPriority)
+CResult::CResult(PRIORITY Priority) : CScene(Priority)
 {
 	//メンバ変数のクリア
 	m_pScene2D = NULL;
@@ -39,10 +39,7 @@ CResult::~CResult()
 CResult * CResult::Create(void)
 {
 	//リザルトクラスのポインタ変数
-	CResult *pResult = NULL;
-
-	//メモリの確保
-	pResult = new CResult;
+	CResult *pResult = new CResult;
 
 	//メモリが確保できていたら
 	if (pResult != NULL)
@@ -78,7 +75,6 @@ HRESULT CResult::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 	{
 		m_pScene2D->BindTexture(m_pTexture[0]);
 	}
-	
 
 	return E_NOTIMPL;
 }
@@ -91,10 +87,11 @@ void CResult::Uninit(void)
 	if (m_pScene2D != NULL)
 	{
 		m_pScene2D->Uninit();
+		m_pScene2D = NULL;
 	}
 
 	//オブジェクトの破棄
-	SetDeathFlag();
+	Release();
 }
 
 //=============================================================================
@@ -111,7 +108,8 @@ void CResult::Update(void)
 		{
 			pFade->SetFade(CManager::MODE_TYPE_TITLE);
 		}
-		Uninit();
+
+//		Uninit();
 	}
 }
 

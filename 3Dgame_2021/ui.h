@@ -29,7 +29,7 @@ class CScene2D;
 class CUi : public CScene2D
 {
 public:
-	CUi();			// コンストラクタ
+	CUi(PRIORITY Priority = PRIORITY_UI);			// コンストラクタ
 	~CUi();			// デストラクタ
 
 	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);			// 初期化処理

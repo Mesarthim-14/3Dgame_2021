@@ -28,7 +28,7 @@ class CScene2D;
 class CTutorial : public CScene
 {
 public:
-	CTutorial(int nPriority = PRIORITY_0);
+	CTutorial(PRIORITY Priority = PRIORITY_0);
 	~CTutorial();
 	static CTutorial* Create(void);
 	static HRESULT Load(void);
