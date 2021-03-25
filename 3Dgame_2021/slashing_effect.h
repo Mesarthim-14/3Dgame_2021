@@ -33,9 +33,6 @@ public:
 	static CSlashingEffect *Create(D3DXVECTOR3 pos, D3DXVECTOR3 size);
 
 	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);	// ‰Šú‰»ˆ—
-	void Uninit(void);									// I—¹ˆ—
-	void Update(void);									// XVˆ—
-	void Draw(void);									// •`‰æˆ—
 private:
 };
 #endif

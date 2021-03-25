@@ -17,6 +17,7 @@
 #include "fade.h"
 #include "sound.h"
 #include "joypad.h"
+#include "resource_manager.h"
 
 //=======================================================================================
 //静的メンバ変数宣言
@@ -28,7 +29,7 @@ LPDIRECT3DTEXTURE9 CTutorial::m_pTexture[1] = {};
 //=======================================================================================
 CTutorial::CTutorial(PRIORITY Priority) : CScene(Priority)
 {
-	m_pScene = NULL;
+	m_pScene = nullptr;
 }
 
 //=======================================================================================
@@ -69,7 +70,7 @@ HRESULT CTutorial::Load(void)
 //=======================================================================================
 HRESULT CTutorial::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 {
-	if (m_pScene == NULL)
+	if (m_pScene == nullptr)
 	{
 		m_pScene = CScene2D::Create(D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f), D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f));
 
@@ -77,7 +78,8 @@ HRESULT CTutorial::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 		m_pScene->BindTexture(m_pTexture[0]);
 	}
 	
-	CSound *pSound = CManager::GetSound();
+	// サウンドのポインタ
+	CSound *pSound = CManager::GetResourceManager()->GetSoundClass();
 	//pSound->Play(CSound::SOUND_LABEL_BGM_TITLE);
 
 	return S_OK;
@@ -88,7 +90,7 @@ HRESULT CTutorial::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 //=======================================================================================
 void CTutorial::Uninit(void)
 {
-	if (m_pScene != NULL)
+	if (m_pScene != nullptr)
 	{
 		m_pScene->Uninit();
 	}

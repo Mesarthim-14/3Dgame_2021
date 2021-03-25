@@ -16,12 +16,16 @@
 #include "game.h"
 #include "player.h"
 #include "joypad.h"
+#include "kobold.h"
+#include "motion.h"
 
 //=============================================================================
 // マクロ定義
 //=============================================================================
 #define CAMERA_DEFAULT_Fθ			(D3DXToRadian(75.0f))			// カメラのθDefault値
-#define DISTANCE					(1300.0f)						// 視点～注視点の距離
+#define DISTANCE					(1700.0f)						// 視点～注視点の距離
+#define DISTANCE_FAR_UP				(35.0f)							// カメラを引く値
+#define FAR_DISTANCE				(3000.0f)						// 遠めのカメラ
 #define PLAYER_HEIGHT				(200.0f)						// 注視点の高さ
 #define CAMERA_MIN_Fφ				(D3DXToRadian(10.0f))			// カメラの最小角
 #define CAMERA_MAX_Fφ				(D3DXToRadian(170.0f))			// カメラの最大角
@@ -49,12 +53,12 @@ CCamera * CCamera::Create(void)
 CCamera::CCamera()
 {
 	//各メンバ変数のクリア
-	m_posV = D3DXVECTOR3(0.0f, 0.0f, 0.0f);		// カメラの座標
-	m_posVDest = D3DXVECTOR3(0.0f, 0.0f, 0.0f);	// カメラの座標（目的地）
-	m_posR = D3DXVECTOR3(0.0f, 0.0f, 0.0f);		// 注視点
-	m_posRDest = D3DXVECTOR3(0.0f, 0.0f, 0.0f);	// 注視点（目的地）
-	m_posU = D3DXVECTOR3(0.0f, 0.0f, 0.0f);		// 上方向ベクトル
-	m_rot = D3DXVECTOR3(0.0f, 0.0f, 0.0f);		// 向き
+	m_posV = ZeroVector3;		// カメラの座標
+	m_posVDest = ZeroVector3;	// カメラの座標（目的地）
+	m_posR = ZeroVector3;		// 注視点
+	m_posRDest = ZeroVector3;	// 注視点（目的地）
+	m_posU = ZeroVector3;		// 上方向ベクトル
+	m_rot = ZeroVector3;		// 向き
 	m_fDistance = 0.0f;							// 視点～注視点の距離
 	m_fMove = 0.0f;								// 移動量
 }
@@ -72,16 +76,16 @@ CCamera::~CCamera()
 HRESULT CCamera::Init(void)
 {
 	// レンダラーの情報を受け取る
-	CRenderer *pRenderer = NULL;
+	CRenderer *pRenderer = nullptr;
 	pRenderer = CManager::GetRenderer();
 	LPDIRECT3DDEVICE9 pDevice = pRenderer->GetDevice();
 
 	m_fMove = 5.0f;
 	m_fDistance = DISTANCE;
 	m_fθ = CAMERA_DEFAULT_Fθ;
-	m_fφ = D3DXToRadian(0.0f);									// 初期値敵のほう向ける
-	m_posR = D3DXVECTOR3(0.0f, PLAYER_HEIGHT, 0.0f);			// 注視点設定
-	m_posU = D3DXVECTOR3(0.0f, 1.0f, 0.0f);						// 上方向ベクトル
+	m_fφ = D3DXToRadian(0.0f);										// 初期値敵のほう向ける
+	m_posR = D3DXVECTOR3(0.0f, PLAYER_HEIGHT, 0.0f);				// 注視点設定
+	m_posU = D3DXVECTOR3(0.0f, 1.0f, 0.0f);							// 上方向ベクトル
 	m_posV.x = m_posR.x + m_fDistance* sinf(m_fθ) * sinf(m_fφ);	//カメラ位置X
 	m_posV.y = m_posR.z + m_fDistance* cosf(m_fθ);					//カメラ位置Y
 	m_posV.z = m_posR.y + m_fDistance* sinf(m_fθ) * cosf(m_fφ);	//カメラ位置Z
@@ -108,7 +112,7 @@ void CCamera::Update(void)
 	D3DXVECTOR3 PlayerRot;	//プレイヤー角度
 
 	// プレイヤーが使われていたら
-	if (CGame::GetPlayer() != NULL)
+	if (CGame::GetPlayer() != nullptr)
 	{
 		//プレイヤー1位置取得
 		PlayerPos = CGame::GetPlayer()->GetPos();
@@ -116,6 +120,7 @@ void CCamera::Update(void)
 		//プレイヤー1角度取得
 		PlayerRot = CGame::GetPlayer()->GetRot();
 
+		// 通常状態のカメラ移動
 		NomalUpdate(PlayerPos, PlayerRot);
 	}
 }
@@ -130,6 +135,57 @@ void CCamera::NomalUpdate(D3DXVECTOR3 PlayerPos, D3DXVECTOR3 PlayerRot)
 
 	// ジョイパッドの取得
 	DIJOYSTATE js = CInputJoypad::GetStick(0);
+
+	// 角度の取得
+	float fAngle3 = atan2f((float)js.lX, -(float)js.lY);	// コントローラの角度
+	float fAngle2 = atan2f(-(float)js.lX, (float)js.lY);	// コントローラの角度
+	float fAngle = CGame::GetCamera()->Getφ();				// カメラの角度
+
+	// メモリ確保
+	CScene *pScene = nullptr;
+
+	// キャラクターのポインタ
+	CCharacter *pCharacter = (CCharacter*)pScene->GetTop(CCharacter::PRIORITY_CHARACTER);
+
+	while (pCharacter != nullptr)
+	{
+		// ボスの行動取得
+		if (pCharacter->GetCType() == CCharacter::CHARACTER_TYPE_ENEMY)
+		{
+			// !nullcheck
+			if (pCharacter->GetMotion() != nullptr)
+			{
+				// ジャンプモーションだったら
+				if (pCharacter->GetMotion()->GetMotionState() == (int)CKobold::KOBOLD_MOTION_JUMP_ATTACK)
+				{
+					// 距離の加算
+					m_fDistance += DISTANCE_FAR_UP;
+
+					// 距離の調整
+					if (m_fDistance >= FAR_DISTANCE)
+					{
+						m_fDistance = FAR_DISTANCE;
+					}
+				}
+				else
+				{
+					// 距離の調整
+					if (m_fDistance > DISTANCE)
+					{
+						m_fDistance -= DISTANCE_FAR_UP;
+					}
+
+					if (m_fDistance <= DISTANCE)
+					{
+						m_fDistance = DISTANCE;
+					}
+				}
+			}
+		}
+
+		// 次のポインタ
+		pCharacter = (CCharacter*)pCharacter->GetNext();
+	}
 
 	//視点（カメラ座標）の左旋回
 	if (pKeyInput->GetPress(DIK_LEFT) || js.lZ > STICK_SENSITIVITY)
@@ -152,6 +208,7 @@ void CCamera::NomalUpdate(D3DXVECTOR3 PlayerPos, D3DXVECTOR3 PlayerRot)
 		m_fθ += STICK_INPUT_CONVERSION;
 	}
 
+	// カメラの位置設定
 	m_posVDest.x = PlayerPos.x + m_fDistance * sinf(m_fθ) * sinf(m_fφ);	// カメラ位置X設定
 	m_posVDest.y = PlayerPos.y + PLAYER_HEIGHT + m_fDistance * cosf(m_fθ);	// カメラ位置Y設定
 	m_posVDest.z = PlayerPos.z + m_fDistance * sinf(m_fθ) * cosf(m_fφ);	// カメラ位置Z設定
@@ -234,6 +291,14 @@ D3DXVECTOR3 CCamera::GetposR(void)
 D3DXMATRIX CCamera::GetMtxView(void)
 {
 	return m_mtxView;
+}
+
+//=============================================================================
+// 目的の角度
+//=============================================================================
+D3DXVECTOR3 CCamera::GetposVDest(void)
+{
+	return m_posVDest;
 }
 
 //=============================================================================

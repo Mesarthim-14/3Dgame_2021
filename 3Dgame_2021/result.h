@@ -1,11 +1,11 @@
+#ifndef _RESULT_H_
+#define _RESULT_H_
 //=============================================================================
 //
 // リザルト処理 [result.h]
-// Author : 山田陵太
+// Author : Konishi Yuuto
 //
 //=============================================================================
-#ifndef _RESULT_H_
-#define _RESULT_H_
 
 //=============================================================================
 //インクルードファイル
@@ -23,17 +23,18 @@ class CScene2D;
 class CResult : public CScene
 {
 public:
-	CResult(PRIORITY Priority = PRIORITY_0);
-	~CResult();
+	CResult(PRIORITY Priority = PRIORITY_0);			// コンストラクタ
+	~CResult();											// デストラクタ
 
-	static CResult* Create(void);
-	static HRESULT Load(void);
-	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);
-	void Uninit(void);
-	void Update(void);
-	void Draw(void);
+	static CResult* Create(void);						// インスタンス生成
+	static HRESULT Load(void);							// テクスチャのロード	
+	static void UnLoad(void);							// テクスチャアンロード
+	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);	// 初期化処理
+	void Uninit(void);									// 終了処理
+	void Update(void);									// 更新処理
+	void Draw(void);									// 描画処理
 private:
-	static LPDIRECT3DTEXTURE9 m_pTexture[2];
-	CScene2D* m_pScene2D;
+	static LPDIRECT3DTEXTURE9 m_pTexture[2];			// テクスチャ用ポインタ
+	CScene2D* m_pScene2D;								// シーン2D
 };
 #endif

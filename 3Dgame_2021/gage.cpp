@@ -13,6 +13,7 @@
 #include "renderer.h"
 #include "game.h"
 #include "texture.h"
+#include "resource_manager.h"
 
 //=========================================================
 // マクロ定義
@@ -24,11 +25,11 @@
 //=========================================================
 CGage::CGage(PRIORITY Priority) : CScene(Priority)
 {
-	m_pVtxBuff = NULL;
+	m_pVtxBuff = nullptr;
 	m_nGage = 0;
 	m_nMaxGage = 0;
 	m_nSubNum = 0;
-	m_size = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+	m_size = ZeroVector3;
 	m_color = D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
@@ -45,7 +46,7 @@ CGage::~CGage()
 HRESULT CGage::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
 	// レンダラーの情報を受け取る
-	CRenderer *pRenderer = NULL;
+	CRenderer *pRenderer = nullptr;
 	pRenderer = CManager::GetRenderer();
 	LPDIRECT3DDEVICE9 pDevice = pRenderer->GetDevice();
 
@@ -55,7 +56,7 @@ HRESULT CGage::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 		FVF_VERTEX_2D,
 		D3DPOOL_MANAGED,
 		&m_pVtxBuff,
-		NULL);
+		nullptr);
 
 	VERTEX_2D *pVtx;	//頂点情報へのポインタ
 
@@ -101,10 +102,10 @@ HRESULT CGage::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 void CGage::Uninit(void)
 {
 	// 頂点バッファの破棄
-	if (m_pVtxBuff != NULL)
+	if (m_pVtxBuff != nullptr)
 	{
 		m_pVtxBuff->Release();
-		m_pVtxBuff = NULL;
+		m_pVtxBuff = nullptr;
 	}
 
 	//オブジェクト破棄
@@ -154,20 +155,16 @@ void CGage::Draw(void)
 	//アルファテストを有効化
 	pD3DDevice->SetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
 
-	//アルファテスト基準値の設定
-	//	pD3DDevice->SetRenderState(D3DRS_ALPHAREF, 0);
-
-	//アルファテストの比較方法の設定(GREATERは基準値より大きい場合)
-	//	pD3DDevice->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
-
 	// 頂点バッファをデータストリームに設定
 	pD3DDevice->SetStreamSource(0, m_pVtxBuff, 0, sizeof(VERTEX_2D));
 
 	// 頂点フォーマットの設定
 	pD3DDevice->SetFVF(FVF_VERTEX_2D);
 
+	CTexture *pTexture = CManager::GetResourceManager()->GetTextureClass();
+
 	// テクスチャの設定
-	pD3DDevice->SetTexture(0, CTexture::GetTexture(CTexture::TEXTURE_NUM_GAGEBAR));
+	pD3DDevice->SetTexture(0, pTexture->GetTexture(CTexture::TEXTURE_NUM_GAGEBAR));
 
 	// ポリゴンの描画
 	pD3DDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP,
@@ -178,7 +175,7 @@ void CGage::Draw(void)
 	pD3DDevice->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 
 	// テクスチャの設定
-	pD3DDevice->SetTexture(0, NULL);
+	pD3DDevice->SetTexture(0, nullptr);
 }
 
 //=========================================================
@@ -219,6 +216,11 @@ void CGage::SetSubNum(int nSubNum)
 void CGage::SubGage(int nGage)
 {
 	m_nGage -= nGage;
+
+	if (m_nGage <= 0)
+	{
+		m_nGage = 0;
+	}
 }
 
 //=========================================================

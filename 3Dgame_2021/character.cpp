@@ -17,12 +17,21 @@
 #include "game.h"
 #include "player.h"
 #include "particle.h"
-#include "particle_factory.h"
+#include "effect_factory.h"
+#include "stone_effect.h"
+#include "stone.h"
+#include "texture.h"
+#include "guard_effect.h"
+#include "number_3d.h"
+#include "combo.h"
+#include "sound.h"
+#include "resource_manager.h"
+#include "motion.h"
 
 //=============================================================================
 // マクロ定義
 //=============================================================================
-#define GRAVITY_POWAR			(0.6f)						// 重力の強さ
+#define GRAVITY_POWAR			(0.7f)						// 重力の強さ
 #define GROUND_RIMIT			(0.0f)						// 地面の制限
 
 //=============================================================================
@@ -35,38 +44,31 @@
 //=============================================================================
 CCharacter::CCharacter(PRIORITY Priority) : CScene(Priority)
 {
-	m_pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_posOld = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_move = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_rot = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_state = STATE_NONE;
-	m_Ctype = CHARACTER_TYPE_NONE;
-	m_nLife = 0;
-	m_nAttack = 0;
-	m_nPart = 0;
-	m_nCharaNum = m_nAllNum++;
-	m_nWeaponTipNum = 0;
-	m_fAngle = 0.0f;
-	m_fSpeed = 0.0f;
-	m_bJump = false;
-	m_pLifeBar = NULL;
-	m_pLifeFrame = NULL;
-	m_fRadius = 0.0f;
-	m_fWeaponRadius = 0.0f;
-	m_bArmor = false;
-	memset(m_apModelAnime, 0, sizeof(m_apModelAnime));
-	memset(m_modelfile, 0, sizeof(m_modelfile));
-	m_pFileName = NULL;
-	memset(m_Motion, 0, sizeof(m_Motion));
-	m_apKeyInfo = NULL;
-	m_nMotionState = 0;
-	m_nNumKey = 0;
-	m_nCountMotion = 0;
-	m_nMotionInterval = 0;
-	m_nStateCounter = 0;
-	m_nKey = 0;
-	m_bMotionPlaing = false;
-	m_nAttackPowar = 0;
+	 m_pos = ZeroVector3;
+	 m_posOld = ZeroVector3;
+	 m_move = ZeroVector3;
+	 m_rot = ZeroVector3;
+	 m_state = STATE_NONE;
+	 m_Ctype = CHARACTER_TYPE_NONE;
+	 m_nLife = 0;
+	 m_nAttack = 0;
+	 m_nCharaNum = m_nAllNum++;
+	 m_nWeaponTipNum = 0;
+	 m_fAngle = 0.0f;
+	 m_fSpeed = 0.0f;
+	 m_bJump = false;
+	 m_pLifeBar = nullptr;
+	 m_pLifeFrame = nullptr;
+	 m_fRadius = 0.0f;
+	 m_fWeaponRadius = 0.0f;
+	 m_bArmor = false;
+	 memset(m_apModelAnime, 0, sizeof(m_apModelAnime));
+	 m_nStateCounter = 0;
+	 m_nAttackPowar = 0;
+	 m_nMaxLife = 0;
+	 m_nHitNumber = 0;
+	 m_pMotion = nullptr;
+	 m_nParts = 0;
 }
 
 //=============================================================================
@@ -86,38 +88,6 @@ HRESULT CCharacter::Init(D3DXVECTOR3 pos, D3DXVECTOR3 rot)
 	m_pos = pos;	// 座標の設定
 	m_rot = rot;	// 角度の設定
 
-	//ファイル読み込み
-	if (FAILED(CCharacter::ReadFile()))
-	{
-		return E_FAIL;
-	}
-
-	//モデルパーツ数分繰り返す
-	for (int nCntModel = 0; nCntModel < m_nPart; nCntModel++)
-	{
-		if (m_apModelAnime[nCntModel] == NULL)
-		{
-			//モデルの生成
-			m_apModelAnime[nCntModel] = CModelAnime::Create(m_modelfile[nCntModel].xFileName,
-				m_modelfile[nCntModel].offsetPos, m_modelfile[nCntModel].offsetRot);
-		}
-		//親子構造の設定
-		if (m_apModelAnime[nCntModel] != NULL)
-		{
-			//親モデルの場合
-			if (nCntModel == 0)
-			{
-				m_apModelAnime[nCntModel]->SetParent(NULL);
-			}
-			//子モデルの場合
-			else
-			{
-				//自分の親情報を設定する
-				m_apModelAnime[nCntModel]->SetParent(m_apModelAnime[m_modelfile[nCntModel].nParent]);
-			}
-		}
-	}
-
 	return S_OK;
 }
 
@@ -126,26 +96,41 @@ HRESULT CCharacter::Init(D3DXVECTOR3 pos, D3DXVECTOR3 rot)
 //=============================================================================
 void CCharacter::Uninit()
 {
-	for (int nCntModelNum = 0; nCntModelNum < m_nPart; nCntModelNum++)
+	for (int nCntModelNum = 0; nCntModelNum < m_nParts; nCntModelNum++)
 	{
-		if (m_apModelAnime[nCntModelNum] != NULL)
+		// !nullcheck
+		if (m_apModelAnime[nCntModelNum] != nullptr)
 		{
-			//終了処理
-			m_apModelAnime[nCntModelNum]->Uninit();
-
 			//メモリの削除
 			delete m_apModelAnime[nCntModelNum];
 
 			//メモリのクリア
-			m_apModelAnime[nCntModelNum] = NULL;
+			m_apModelAnime[nCntModelNum] = nullptr;
 		}
 	}
 
+	// !nullcheck
+	if (m_pMotion != nullptr)
+	{
+		//メモリの削除
+		delete m_pMotion;
+		m_pMotion = nullptr;
+	}
+
 	// ライフの枠
-	if (m_pLifeFrame != NULL)
+	if (m_pLifeFrame != nullptr)
 	{
 		// メモリのクリア
-		m_pLifeFrame = NULL;
+		m_pLifeFrame->Uninit();
+		m_pLifeFrame = nullptr;
+	}
+
+	// ライフの枠
+	if (m_pLifeBar != nullptr)
+	{
+		// メモリのクリア
+		m_pLifeBar->Uninit();
+		m_pLifeBar = nullptr;
 	}
 
 	//オブジェクトの破棄
@@ -158,15 +143,15 @@ void CCharacter::Uninit()
 void CCharacter::Update()
 {
 	//アニメーションの更新処理
-	UpdateMotion();
+	ModelAnimeUpdate();
 
 	// 重力
-	if (Gravity() == true)
+	Gravity();
+
+	// 着地の処理
+	if (m_pos.y <= GROUND_RIMIT)
 	{
-		if (m_bLanding == false)
-		{
-			m_bLanding = true;
-		}
+		Landing(GROUND_RIMIT);
 	}
 
 	// 移動量加算
@@ -210,9 +195,9 @@ void CCharacter::Draw()
 
 	pDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);					// 裏面を（左回り）をカリング
 
-	for (int nCntModelNum = 0; nCntModelNum < m_nPart; nCntModelNum++)
+	for (int nCntModelNum = 0; nCntModelNum < m_nParts; nCntModelNum++)
 	{
-		if (m_apModelAnime[nCntModelNum] != NULL)
+		if (m_apModelAnime[nCntModelNum] != nullptr)
 		{
 			//階層モデルクラスの描画処理
 			m_apModelAnime[nCntModelNum]->Draw();
@@ -223,340 +208,132 @@ void CCharacter::Draw()
 }
 
 //=============================================================================
-// モーションの更新処理
+// 着地の処理
 //=============================================================================
-void CCharacter::UpdateMotion(void)
+void CCharacter::Landing(float fPosY)
 {
-	if (this->m_Ctype == CHARACTER_TYPE_PLAYER)
+	m_move.y = 0.0f;
+	m_pos.y = fPosY;
+	m_bJump = false;
+
+	// 着地の状態
+	if (m_bLanding == false)
 	{
-		KEY *pKey[MAX_CHARACTER_PARTS];
-		D3DXVECTOR3 diffPos, diffRot, startPos, startRot, setPos, setRot;
-
-		//現在キーが最大キー数未満の場合
-		if (m_nKey < m_Motion[m_nMotionState].nNumKey)
-		{
-			for (int nCntModel = 0; nCntModel < m_nPart; nCntModel++)
-			{
-				// 各モデルパーツのキー設定
-				m_apKeyInfo = &m_Motion[m_nMotionState].aKeyInfo[m_nKey];
-
-				pKey[nCntModel] = &m_apKeyInfo->aKey[nCntModel];
-			}
-
-			for (int nCntModel = 0; nCntModel < m_nPart; nCntModel++)
-			{
-				if (m_apModelAnime[nCntModel] != NULL)
-				{
-					D3DXVECTOR3 startPos = m_apModelAnime[nCntModel]->GetPosAnime();
-					D3DXVECTOR3 startRot = m_apModelAnime[nCntModel]->GetRotAnime();
-
-					// 1フレーム当たりの更新値 = (終点位置-開始位置) / フレーム数
-					diffPos.x = (pKey[nCntModel]->fPosX - startPos.x) / (float)m_Motion[m_nMotionState].aKeyInfo[m_nKey].nFrame;
-					diffPos.y = (pKey[nCntModel]->fPosY - startPos.y) / (float)m_Motion[m_nMotionState].aKeyInfo[m_nKey].nFrame;
-					diffPos.z = (pKey[nCntModel]->fPosZ - startPos.z) / (float)m_Motion[m_nMotionState].aKeyInfo[m_nKey].nFrame;
-
-					// 1フレーム当たりの更新値 = (終点向き-開始向き) / フレーム数
-					diffRot.x = (pKey[nCntModel]->fRotX - startRot.x) / (float)m_Motion[m_nMotionState].aKeyInfo[m_nKey].nFrame;
-					diffRot.y = (pKey[nCntModel]->fRotY - startRot.y) / (float)m_Motion[m_nMotionState].aKeyInfo[m_nKey].nFrame;
-					diffRot.z = (pKey[nCntModel]->fRotZ - startRot.z) / (float)m_Motion[m_nMotionState].aKeyInfo[m_nKey].nFrame;
-
-					setPos.x = diffPos.x + startPos.x;
-					setPos.y = diffPos.y + startPos.y;
-					setPos.z = diffPos.z + startPos.z;
-
-					setRot.x = diffRot.x + startRot.x;
-					setRot.y = diffRot.y + startRot.y;
-					setRot.z = diffRot.z + startRot.z;
-
-					D3DXVECTOR3 pos = m_apModelAnime[nCntModel]->GetPosAnime();
-					D3DXVECTOR3 rot = m_apModelAnime[nCntModel]->GetRotAnime();
-
-					//位置に更新用の位置を加算
-					pos += setPos;
-
-					//向きに更新用の向きを加算
-					rot += setRot;
-
-					//位置の設定
-					m_apModelAnime[nCntModel]->SetPosAnime(setPos);
-
-					//向きの設定
-					m_apModelAnime[nCntModel]->SetRotAnime(setRot);
-				}
-			}
-
-			//モーションカウンターの加算
-			m_nCountMotion++;
-
-			//現在キーの再生フレームに達したら
-			if (m_nCountMotion == m_Motion[m_nMotionState].aKeyInfo[m_nKey].nFrame)
-			{
-				//キーを１つ進める
-				m_nKey++;
-				m_nCountMotion = 0;
-			}
-		}
-		else
-		{
-			//ループするなら
-			if (m_Motion[m_nMotionState].bLoop == true)
-			{
-				m_nKey = 0;
-			}
-			else
-			{
-				m_nMotionInterval++;
-
-				if (m_nMotionInterval == 10)
-				{
-					m_bMotionPlaing = false;
-					m_nMotionInterval = 0;
-				}
-
-				// アイドルモーションに戻す
-				SetMotionState(0);
-			}
-		}
-
+		m_bLanding = true;
 	}
-}
-
-//=============================================================================
-// ダメージの加算
-//=============================================================================
-void CCharacter::AddDamage(int nDamage)
-{
-	// 0以下になったら
-	if (m_nLife <= 0)
-	{
-		m_nLife = 0;
-	}
-	else
-	{
-		m_nLife -= nDamage;
-		SetState(STATE_DAMAGE);
-		m_bArmor = true;
-
-		// もしライフバーが使われていたら
-		if (m_pLifeBar != NULL)
-		{
-			// ライフバーの設定関数
-			m_pLifeBar->SubGage(nDamage);
-		}
-	}
-
 }
 
 //=============================================================================
 // 重力
 //=============================================================================
-bool CCharacter::Gravity(void)
+void CCharacter::Gravity(void)
 {
 	// 重力をかける
 	m_move.y -= GRAVITY_POWAR;
 	m_pos.y += m_move.y;		// 落下
-
-	// 着地の処理
-	if (m_pos.y <= GROUND_RIMIT)
-	{
-		m_move.y = 0.0f;
-		m_pos.y = GROUND_RIMIT;
-		m_bJump = false;
-
-		return true;
-	}
-
-	return false;
 }
 
 //=============================================================================
-// モデルファイル読み込み
+// モデルの生成
 //=============================================================================
-HRESULT CCharacter::ReadFile(void)
+void CCharacter::ModelCreate(CXfile::HIERARCHY_XFILE_NUM FileNum)
 {
-	FILE *pFile = NULL;		//FILEポインタ
-	char aHeadData[1024];
-	char aModeName[1024];
-	int nModelIndex = 0;	// モデルのインデックス
-	int nMotionType = 0;	// モーションのタイプ
-	int nKeyNum = 0;		// キー番号
-	int nMotionNum = 0;		// モーション番号
+	// XFileのポインタ取得
+	CXfile *pXfile = CManager::GetResourceManager()->GetXfileClass();
 
-	// ファイルオープン
-	pFile = fopen(m_pFileName, "r");
-
-	if (pFile != NULL)
+	// !nullcheck
+	if (pXfile != nullptr)
 	{
-		do
+		// モデルパーツの設定
+		m_nParts = pXfile->GetModelParts(FileNum);
+
+		//モデルパーツ数分繰り返す
+		for (int nCntModel = 0; nCntModel < m_nParts; nCntModel++)
 		{
-			//一列読み込んでモード情報を抽出
-			fgets(aHeadData, sizeof(aHeadData), pFile);
-			sscanf(aHeadData, "%s", aModeName);
+			CXfile::MODELFILE ModelFile = pXfile->GetModelFile(nCntModel, FileNum);
 
-			if (strcmp(aModeName, "MODEL_FILENAME") == 0)
+			if (m_apModelAnime[nCntModel] == nullptr)
 			{
-				//Xファイルの名前
-				sscanf(aHeadData, "%*s %*s %s %*s %*s", m_modelfile[nModelIndex].xFileName);
+				// 初期化処理
+				m_apModelAnime[nCntModel] = CModelAnime::Create(ModelFile.offsetPos, ModelFile.offsetRot);
 
-				//インデックスを１つ進める
-				nModelIndex++;
+				// モデルの情報取得
+				std::vector<CXfile::MODEL> model = pXfile->GetHierarchyXfile(FileNum);
+
+				// モデルの生成
+				m_apModelAnime[nCntModel]->SetModel(model.at(nCntModel));
 			}
 
-			if (strcmp(aModeName, "CHARACTERSET") == 0)
+			//親子構造の設定
+			if (m_apModelAnime[nCntModel] != nullptr)
 			{
-				//インデックスを最初に戻す
-				nModelIndex = 0;
-
-				//END_MOTIONSETを読み込むまで繰り返す
-				while (strcmp(aModeName, "END_CHARACTERSET") != 0)
+				//親モデルの場合
+				if (nCntModel == 0)
 				{
-					//一列読み込んでモード情報を抽出
-					fgets(aHeadData, sizeof(aHeadData), pFile);
-					sscanf(aHeadData, "%s", aModeName);
-
-					if (strcmp(aModeName, "PARTSSET") == 0)
-					{
-						//END_PARTSSETを読み込むまで繰り返す
-						while (strcmp(aModeName, "END_PARTSSET") != 0)
-						{
-							//一列読み込んでモード情報を抽出
-							fgets(aHeadData, sizeof(aHeadData), pFile);
-							sscanf(aHeadData, "%s", aModeName);
-
-							if (strcmp(aModeName, "PARENT") == 0)
-							{
-								//親子情報の設定
-								sscanf(aHeadData, "%*s %*s %d", &m_modelfile[nModelIndex].nParent);
-							}
-							if (strcmp(aModeName, "POS") == 0)
-							{
-								//位置の設定
-								sscanf(aHeadData, "%*s %*s %f %f %f", &m_modelfile[nModelIndex].offsetPos.x,
-									&m_modelfile[nModelIndex].offsetPos.y, &m_modelfile[nModelIndex].offsetPos.z);
-							}
-							if (strcmp(aModeName, "ROT") == 0)
-							{
-								//向きの設定
-								sscanf(aHeadData, "%*s %*s %f %f %f", &m_modelfile[nModelIndex].offsetRot.x,
-									&m_modelfile[nModelIndex].offsetRot.y, &m_modelfile[nModelIndex].offsetRot.z);
-							}
-						}
-						//インデックスを１つ進める
-						nModelIndex++;
-					}
+					m_apModelAnime[nCntModel]->SetParent(nullptr);
+				}
+				//子モデルの場合
+				else
+				{
+					//自分の親情報を設定する
+					m_apModelAnime[nCntModel]->SetParent(m_apModelAnime[ModelFile.nParent]);
 				}
 			}
+		}
 
-			//モーションセット
-			if (strcmp(aModeName, "MOTIONSET") == 0)
-			{
-				//END_MOTIONSETを読み込むまで繰り返す
-				while (strcmp(aModeName, "END_MOTIONSET") != 0)
-				{
-					//一列読み込んでモード情報を抽出
-					fgets(aHeadData, sizeof(aHeadData), pFile);
-					sscanf(aHeadData, "%s", aModeName);
-
-					//ループ情報の取得
-					if (strcmp(aModeName, "LOOP") == 0)
-					{
-						sscanf(aHeadData, "%*s %*s %d", (int*)&m_Motion[nMotionType].bLoop);
-					}
-
-					//キー情報の取得
-					if (strcmp(aModeName, "NUM_KEY") == 0)
-					{
-						sscanf(aHeadData, "%*s %*s %d", (int*)&m_Motion[nMotionType].nNumKey);
-					}
-
-					if (strcmp(aModeName, "KEYSET") == 0)
-					{
-						//END_KEYSETになるまで繰り返す
-						while (strcmp(aModeName, "END_KEYSET") != 0)
-						{
-							//一列読み込んでモード情報を抽出
-							fgets(aHeadData, sizeof(aHeadData), pFile);
-							sscanf(aHeadData, "%s", aModeName);
-
-							//フレーム数の取得
-							if (strcmp(aModeName, "FRAME") == 0)
-							{
-								sscanf(aHeadData, "%*s %*s %d", &m_Motion[nMotionType].aKeyInfo[nMotionNum].nFrame);
-							}
-
-							//各キーのオフセット情報の取得
-							if (strcmp(aModeName, "KEY") == 0)
-							{
-								//END_KEYになるまで繰り返す
-								while (strcmp(aModeName, "END_KEY") != 0)
-								{
-									//一列読み込んでモード情報を抽出
-									fgets(aHeadData, sizeof(aHeadData), pFile);
-									sscanf(aHeadData, "%s", aModeName);
-
-									//位置の取得
-									if (strcmp(aModeName, "POS") == 0)
-									{
-										sscanf(aHeadData, "%*s %*s %f %f %f",
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fPosX,
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fPosY,
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fPosZ);
-									}
-
-									//向きの取得
-									if (strcmp(aModeName, "ROT") == 0)
-									{
-										sscanf(aHeadData, "%*s %*s %f %f %f",
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fRotX,
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fRotY,
-											&m_Motion[nMotionType].aKeyInfo[nMotionNum].aKey[nKeyNum].fRotZ);
-									}
-								}
-								//読み終わったらカウントを1つ進める
-								nKeyNum++;
-							}
-						}
-						nKeyNum = 0;
-						nMotionNum++;
-					}
-				}
-				nMotionNum = 0;
-				nMotionType++;
-			}
-
-		} while (strcmp(aModeName, "END_SCRIPT") != 0);
-
-		//ファイルクローズ
-		fclose(pFile);
-
-		return S_OK;
+		// nullcheck
+		if (m_pMotion == nullptr)
+		{
+			// インスタンス生成
+			m_pMotion = CMotion::Create(pXfile->GetModelFileName(FileNum));
+		}
 	}
-	else
+}
+
+//=============================================================================
+// モデルアニメーション
+//=============================================================================
+void CCharacter::ModelAnimeUpdate(void)
+{
+	// モーションの更新処理
+	if (m_pMotion != nullptr)
 	{
-		//失敗した場合メッセージボックスを表示
-		MessageBox(NULL, "モーションファイルを開くのに失敗しました", "警告", MB_OK | MB_ICONEXCLAMATION);
-
-		return	E_FAIL;
+		// モーションの更新
+		m_pMotion->UpdateMotion(m_nParts, m_apModelAnime);
 	}
+}
 
+//=============================================================================
+// モーションの設定
+//=============================================================================
+void CCharacter::SetMotion(int nMotionState)
+{
+	// !nullcheck
+	if (m_pMotion != nullptr)
+	{
+		// モーションの更新
+		m_pMotion->SetMotion(nMotionState, m_nParts, m_apModelAnime);
+	}
 }
 
 //=============================================================================
 // 体力バーの生成関数
 //=============================================================================
-void CCharacter::LifeBarCreate(D3DXVECTOR3 posFrame, D3DXVECTOR3 sizeFrame, 
+void CCharacter::LifeBarCreate(D3DXVECTOR3 posFrame, D3DXVECTOR3 sizeFrame,
 	D3DXVECTOR3 posBar, D3DXVECTOR3 sizeBar, D3DXCOLOR color, int nLife)
 {
-	m_nLife = nLife;
+	// 引数の代入
+	m_nLife = nLife;		// ライフの設定
+	m_nMaxLife = nLife;		// ライフの最大数設定
 
 	// ライフのフレーム
-	if (m_pLifeFrame == NULL)
+	if (m_pLifeFrame == nullptr)
 	{
 		m_pLifeFrame = CLifeFrame::Create(posFrame, sizeFrame);
 	}
 
 	// HPバーの生成
-	if (m_pLifeBar == NULL)
+	if (m_pLifeBar == nullptr)
 	{
 		// 体力バー
 		m_pLifeBar = CLifeBar::Create(posBar, sizeBar,
@@ -572,7 +349,7 @@ void CCharacter::BodyCollision(void)
 	// キャラクターのポインタ
 	CCharacter *pCharacter = (CCharacter*)GetTop(PRIORITY_CHARACTER);
 
-	while (pCharacter != NULL)
+	while (pCharacter != nullptr)
 	{
 		// 自分の番号じゃないとき
 		if (pCharacter->m_nCharaNum != m_nCharaNum)
@@ -623,27 +400,106 @@ bool CCharacter::AttackCollision(void)
 		// キャラクターのポインタ
 		CCharacter *pCharacter = (CCharacter*)GetTop(PRIORITY_CHARACTER);
 
-		while (pCharacter != NULL)
+		while (pCharacter != nullptr)
 		{
 			// 自分の番号じゃないとき
 			if (pCharacter->m_Ctype == CHARACTER_TYPE_ENEMY)
 			{
+				// やられ判定パーツ座標取得
+				D3DXVECTOR3 pos = D3DXVECTOR3(
+					pCharacter->GetModelAnime(pCharacter->GetHitNumber())->GetMtxWorld()._41,
+					pCharacter->GetModelAnime(pCharacter->GetHitNumber())->GetMtxWorld()._42,
+					pCharacter->GetModelAnime(pCharacter->GetHitNumber())->GetMtxWorld()._43);
+
 				// 円形と円形の当たり判定
 				if (CCollision::CollisionCircularAndCircular(
-					m_pos, pCharacter->m_pos,
-					m_fRadius, pCharacter->m_fRadius) == true)
+					m_pos, pos,
+					m_fWeaponRadius, pCharacter->m_fRadius) == true)
 				{
 					if (pCharacter->m_state != STATE_DAMAGE)
 					{
 						// ソードスキル
-						CParticleFactory::CreateParticle(pCharacter->m_pos, 
-							CParticleFactory::PARTICLE_NUM_EXPLOSION);
+						CEffectFactory::CreateEffect(pCharacter->m_pos,
+							CEffectFactory::EFFECT_NUM_EXPLOSION);
+
+						// ヒットエフェクト
+						CEffectFactory::CreateEffect(D3DXVECTOR3(
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._41,
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._42,
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._43),
+							CEffectFactory::EFFECT_NUM_HIT_EFFECT);
+
+						// ヒットエフェクト
+						CEffectFactory::CreateEffect(D3DXVECTOR3(
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._41,
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._42,
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._43),
+							CEffectFactory::EFFECT_NUM_HIT_EXPLOSION);
+
+						// ヒットエフェクト
+						CEffectFactory::CreateEffect(D3DXVECTOR3(
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._41,
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._42,
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._43),
+							CEffectFactory::EFFECT_NUM_HIT_IMPACT);
+
+						int nDamage = 0;
+
+						// ソードスキル
+						if (m_pMotion->GetMotionState() == (int)(CPlayer::MOTION_SWORD_SKILL_000))
+						{
+							// ダメージの値
+							nDamage = PLAYER_SKILL_ATTACK_DAMAGE;
+						}
+						else
+						{
+							// ダメージの値
+							nDamage = PLAYER_ATTACK_DAMAGE;
+						}
+
+						// ダメージ
+						nDamage += rand() % PLAYER_ATTACK_RAND_DAMAGE - rand() % PLAYER_ATTACK_RAND_DAMAGE;
+
+						// メモリ
+						CPlayer *pPlayer = CGame::GetPlayer();
+
+						int nNum = 0;
+
+						if (pPlayer != nullptr)
+						{
+							// コンボの倍率を決める
+							nNum = (float)nDamage + ((float)pPlayer->GetCombo()->GetComboNum() * DAMAGE_MAG);
+
+						}
 
 						// そのキャラクターにダメージを与える
-						pCharacter->AddDamage(PLAYER_ATTACK_DAMAGE);
-					}
+						pCharacter->AddDamage(nNum);
 
-					return true;
+						// 音を入れる
+						CSound *pSound = CManager::GetResourceManager()->GetSoundClass();
+						pSound->Play(CSound::SOUND_LABEL_SE_SLASH);
+
+						if (pPlayer->GetCombo() != nullptr)
+						{
+							// コンボ時の関数
+							pPlayer->GetCombo()->Combo(nNum);
+						}
+
+						// ダメージの衝撃
+						CEffectFactory::CreateEffect(D3DXVECTOR3(
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._41,
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._42,
+							this->m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._43),
+							CEffectFactory::EFFECT_NUM_HIT_IMPACT_000);
+
+						CNumber3d::Create(D3DXVECTOR3(
+							this->m_apModelAnime[m_nWeaponRootNum]->GetMtxWorld()._41,
+							this->m_apModelAnime[m_nWeaponRootNum]->GetMtxWorld()._42,
+							this->m_apModelAnime[m_nWeaponRootNum]->GetMtxWorld()._43),
+							DAMAGE_NUM_SIZE, nNum);
+
+						return true;
+					}
 				}
 			}
 
@@ -663,12 +519,55 @@ bool CCharacter::AttackCollision(void)
 			m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._42,
 			m_apModelAnime[m_nWeaponTipNum]->GetMtxWorld()._43);
 
-		// 円形と円形の当たり判定
-		if (CCollision::CollisionCircularAndCircular(
-			WorldPos, pPlayer->m_pos,
-			m_fWeaponRadius, pPlayer->m_fRadius) == true)
+		// nullcheck
+		if (pPlayer != nullptr)
 		{
-			return true;
+			// 円形と円形の当たり判定
+			if (CCollision::CollisionCircularAndCircular(
+				WorldPos, pPlayer->m_pos,
+				m_fWeaponRadius, pPlayer->m_fRadius) == true)
+			{
+				// 無敵状態じゃなかったら
+				if (pPlayer->GetArmor() == false)
+				{
+					if (pPlayer->m_pMotion->GetMotionState() == CPlayer::MOTION_GUARD)
+					{
+						// プレイヤーにダメージを与える
+						pPlayer->AddDamage(m_nAttackPowar / PLAYER_GUARD_CUT_DAMAGE);
+
+						// ガード時のパーティクル
+						CEffectFactory::CreateEffect(D3DXVECTOR3(
+							pPlayer->GetPos().x,
+							pPlayer->GetPos().y,
+							pPlayer->GetPos().z),
+							CEffectFactory::EFFECT_NUM_GUARD_PARTICLE);
+
+						if (pPlayer->GetGuardEffect() != nullptr)
+						{
+							// ガードの発光
+							pPlayer->GetGuardEffect()->Luminous();
+						}
+					}
+					else
+					{
+						// プレイヤーにダメージを与える
+						pPlayer->AddDamage(m_nAttackPowar);
+						pPlayer->SetMotion(CPlayer::MOTION_DAMAGE);
+
+						// ダメージエフェクト
+						CEffectFactory::CreateEffect(D3DXVECTOR3(
+							pPlayer->GetPos().x,
+							pPlayer->GetPos().y + PLAYER_BASE_POS_Y,
+							pPlayer->GetPos().z),
+							CEffectFactory::EFFECT_NUM_DAMAGE_EFFECT);
+
+						// コンボの終了
+						pPlayer->GetCombo()->ComboBreak();
+					}
+
+					return true;
+				}
+			}
 		}
 	}
 	break;
@@ -681,52 +580,53 @@ bool CCharacter::AttackCollision(void)
 }
 
 //=============================================================================
-// モーションの設定
+// ダメージの加算
 //=============================================================================
-void CCharacter::SetMotion(int nMotion)
+void CCharacter::AddDamage(int nDamage)
 {
-	// 元のモーションと違ったら
-	if (m_nMotionState != nMotion)
+	// 0以下になったら
+	if (m_nLife <= 0)
 	{
-		// 値の初期化
-		m_nKey = 0;
-		m_nCountMotion = 0;
-		m_nMotionInterval = 0;
-		D3DXVECTOR3 pos, rot;
-		m_nMotionState = nMotion;
-		m_bMotionPlaing = true;
+		m_nLife = 0;
+	}
+	else
+	{
+		m_nLife -= nDamage;
+		SetState(STATE_DAMAGE);
+		m_bArmor = true;
 
-		for (int nCntModel = 0; nCntModel < m_nPart; nCntModel++)
+		// もしライフバーが使われていたら
+		if (m_pLifeBar != nullptr)
 		{
-			if (m_apModelAnime[nCntModel] != NULL)
-			{
-				//開始位置
-				pos.x = m_Motion[m_nMotionState].aKeyInfo[m_nKey].aKey[nCntModel].fPosX;
-				pos.y = m_Motion[m_nMotionState].aKeyInfo[m_nKey].aKey[nCntModel].fPosY;
-				pos.z = m_Motion[m_nMotionState].aKeyInfo[m_nKey].aKey[nCntModel].fPosZ;
-
-				//開始向き
-				rot.x = m_Motion[m_nMotionState].aKeyInfo[m_nKey].aKey[nCntModel].fRotX;
-				rot.y = m_Motion[m_nMotionState].aKeyInfo[m_nKey].aKey[nCntModel].fRotY;
-				rot.z = m_Motion[m_nMotionState].aKeyInfo[m_nKey].aKey[nCntModel].fRotZ;
-
-				//位置の設定
-				m_apModelAnime[nCntModel]->SetPosAnime(pos);
-
-				//向きの設定
-				m_apModelAnime[nCntModel]->SetRotAnime(rot);
-			}
+			// ライフバーの設定関数
+			m_pLifeBar->SubGage(nDamage);
 		}
 	}
 }
 
 //=============================================================================
-// モデルパーツ情報読み込み
+// 回復の処理
 //=============================================================================
-void CCharacter::SetCharaModel(char * xfilename, int nPart, int nMotion)
+void CCharacter::HeelLife(int nHeelNum)
 {
-	m_pFileName = xfilename;
-	m_nPart = nPart;
+	// 0以下になったら
+	if (m_nLife >= m_nMaxLife)
+	{
+		m_nLife = m_nMaxLife;
+	}
+	else
+	{
+		m_nLife += nHeelNum;
+		SetState(STATE_DAMAGE);
+		m_bArmor = true;
+
+		// もしライフバーが使われていたら
+		if (m_pLifeBar != nullptr)
+		{
+			// ライフバーの設定関数
+			m_pLifeBar->HealGage(nHeelNum);
+		}
+	}
 }
 
 //=============================================================================
@@ -775,30 +675,6 @@ void CCharacter::SetRot(D3DXVECTOR3 rot)
 void CCharacter::SetLife(int nLife)
 {
 	m_nLife = nLife;
-}
-
-//=============================================================================
-// モーションのカウント設定
-//=============================================================================
-void CCharacter::SetCountMotion(int CountMotion)
-{
-	m_nCountMotion = CountMotion;
-}
-
-//=============================================================================
-// モーションの状態設定
-//=============================================================================
-void CCharacter::SetMotionState(int nMotionState)
-{
-	m_nMotionState = nMotionState;
-}
-
-//=============================================================================
-// キーの設定
-//=============================================================================
-void CCharacter::SetKey(int nKey)
-{
-	m_nKey = nKey;
 }
 
 //=============================================================================
@@ -887,4 +763,12 @@ void CCharacter::SetStateCounter(int nStateCounter)
 void CCharacter::SetAttackPower(int nAttackPowar)
 {
 	m_nAttackPowar = nAttackPowar;
+}
+
+//=============================================================================
+// やられ判定の設定
+//=============================================================================
+void CCharacter::SetHitNumber(int nHitNumber)
+{
+	m_nHitNumber = nHitNumber;
 }

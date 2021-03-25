@@ -563,7 +563,7 @@ Mesh {
    0.000000;0.000000;0.000000;;
    0.000000;0.000000;0.000000;;
    TextureFilename {
-    "C:\\Users\\student\\Pictures\\3Dgame_2021\\Fotolia_68045745_XS.jpg";
+    "sword_effect001.jpeg";
    }
   }
  }

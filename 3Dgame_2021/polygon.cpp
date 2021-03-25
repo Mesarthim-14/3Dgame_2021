@@ -1,17 +1,16 @@
 //=============================================================================
 //
-// メイン処理 [life.cpp]
-// Author : 山田陵太
+// ポリゴン生成クラス処理 [polygon.cpp]
+// Author : Konishi Yuuto
 //
+//=============================================================================
+
+//=============================================================================
+// インクルード
 //=============================================================================
 #include "polygon.h"
 #include "manager.h"
 #include "renderer.h"
-
-//=============================================================================
-//静的メンバ変数宣言
-//=============================================================================
-LPDIRECT3DTEXTURE9 CPolygon::m_pTexture[CPolygon::TEX_TYPE_MAX] = {};
 
 //=============================================================================
 //ポリゴンクラスのコンストラクタ
@@ -19,10 +18,9 @@ LPDIRECT3DTEXTURE9 CPolygon::m_pTexture[CPolygon::TEX_TYPE_MAX] = {};
 CPolygon::CPolygon()
 {
 	//各メンバ変数のクリア
-	m_pVtxBuff = NULL;
-	m_pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_Size = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_Type = TEX_TYPE_NORE;
+	m_pVtxBuff = nullptr;
+	m_pos = ZeroVector3;
+	m_Size = ZeroVector3;
 }
 
 //=============================================================================
@@ -35,72 +33,32 @@ CPolygon::~CPolygon()
 //=============================================================================
 //ポリゴンクラスのクリエイト処理
 //=============================================================================
-CPolygon * CPolygon::Create(const D3DXVECTOR3 pos, const D3DXVECTOR3 size, const TEX_TYPE type)
+CPolygon * CPolygon::Create(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 {
-	//ポリゴンクラスのポインタ変数
-	CPolygon *pPolygon = NULL;
+	// ポリゴンクラスのポインタ変数
+	CPolygon *pPolygon = nullptr;
 
 	//メモリの確保
 	pPolygon = new CPolygon;
 
-	//メモリを確保できていたら
-	if (pPolygon != NULL)
+	// !nullcheck
+	if (pPolygon != nullptr)
 	{
 		//初期化処理呼び出し
-		pPolygon->Init(pos, size, type);
+		pPolygon->Init(pos, size);
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return pPolygon;
 }
 
 //=============================================================================
-//ポリゴンクラスのテクスチャ読み込み処理
-//=============================================================================
-HRESULT CPolygon::Load(void)
-{
-	//デバイスの取得
-	LPDIRECT3DDEVICE9 pD3DDevice = CManager::GetRenderer()->GetDevice();
-
-	m_pTexture[TEX_TYPE_NORE] = NULL;
-
-	//テクスチャの読み込み
-	D3DXCreateTextureFromFile(pD3DDevice, "data/Texture/Title.png", &m_pTexture[TEX_TYPE_TITLE]);	//タイトル
-	D3DXCreateTextureFromFile(pD3DDevice, "data/Texture/Result.png", &m_pTexture[TEX_TYPE_RESULET]);	//リザルト
-	D3DXCreateTextureFromFile(pD3DDevice, "data/Texture/gaugebar.png", &m_pTexture[TEX_TYPE_LIFE_GAUGE]);	//ライフ
-	D3DXCreateTextureFromFile(pD3DDevice, "data/Texture/UnderUI.png", &m_pTexture[TEX_TYPE_UNDERUI]);	//UnderUI
-
-	D3DXCreateTextureFromFile(pD3DDevice, "data/Texture/チーター.png", &m_pTexture[TEX_TYPE_CHEETAH]);	//チーター
-	D3DXCreateTextureFromFile(pD3DDevice, "data/Texture/ゴリラ.png", &m_pTexture[TEX_TYPE_GORILLA]);	//ゴリラ
-	D3DXCreateTextureFromFile(pD3DDevice, "data/Texture/亀.png", &m_pTexture[TEX_TYPE_TURTLE]);	//カメ
-	D3DXCreateTextureFromFile(pD3DDevice, "data/Texture/PRESS  ENTER.png", &m_pTexture[TEX_TYPE_PRESSENTER]);	//PRESS ENTERテクスチャ
-
-	return S_OK;
-}
-
-//=============================================================================
-//ポリゴンクラスのテクスチャ破棄処理
-//=============================================================================
-void CPolygon::UnLoad(void)
-{
-	for (int nCount = 0; nCount < TEX_TYPE_MAX; nCount++)
-	{
-		//テクスチャの破棄
-		if (m_pTexture[nCount] != NULL)
-		{
-			m_pTexture[nCount]->Release();
-			m_pTexture[nCount] = NULL;
-		}
-	}
-}
-
-//=============================================================================
 //ポリゴンクラスの初期化処理
 //=============================================================================
-HRESULT CPolygon::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size, const TEX_TYPE type)
+HRESULT CPolygon::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 {
 	//デバイスの取得
 	LPDIRECT3DDEVICE9 pD3DDevice = CManager::GetRenderer()->GetDevice();
@@ -114,9 +72,6 @@ HRESULT CPolygon::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size, const TEX_
 	//大きさの設定
 	m_Size = size;
 
-	//テクスチャの設定
-	m_Type = type;
-
 	//頂点バッファの作成
 	pD3DDevice->CreateVertexBuffer(
 		sizeof(VERTEX_2D) * NUM_VERTEX,	//バッファサイズ
@@ -124,7 +79,7 @@ HRESULT CPolygon::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size, const TEX_
 		FVF_VERTEX_2D,	//フォーマット
 		D3DPOOL_MANAGED,	//(固定)
 		&m_pVtxBuff,
-		NULL
+		nullptr
 	);
 
 	//頂点データをロックし、頂点バッファへのポインタ取得
@@ -166,10 +121,10 @@ HRESULT CPolygon::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size, const TEX_
 void CPolygon::Uninit(void)
 {
 	//頂点バッファの破棄
-	if (m_pVtxBuff != NULL)
+	if (m_pVtxBuff != nullptr)
 	{
 		m_pVtxBuff->Release();
-		m_pVtxBuff = NULL;
+		m_pVtxBuff = nullptr;
 	}
 }
 
@@ -195,7 +150,7 @@ void CPolygon::Draw(void)
 	pD3DDevice->SetFVF(FVF_VERTEX_2D);
 
 	//テクスチャの設定
-	pD3DDevice->SetTexture(0, m_pTexture[m_Type]);
+	pD3DDevice->SetTexture(0, nullptr);
 
 	// ポリゴンの描画
 	pD3DDevice->DrawPrimitive(
@@ -204,14 +159,12 @@ void CPolygon::Draw(void)
 		NUM_POLYGON);	//ポリゴン数
 
 	//テクスチャの設定を元に戻す
-	pD3DDevice->SetTexture(0, NULL);
+	pD3DDevice->SetTexture(0, nullptr);
 }
 
-void CPolygon::SetType(const TEX_TYPE type)
-{
-	m_Type = type;
-}
-
+//=============================================================================
+// 色の設定
+//=============================================================================
 void CPolygon::SetColor(const D3DXCOLOR color)
 {
 	//頂点情報へのポインタ

@@ -13,6 +13,7 @@
 #include "manager.h"
 #include "player.h"
 #include "texture.h"
+#include "resource_manager.h"
 
 //=============================================================================
 // マクロ定義
@@ -28,10 +29,9 @@ CFire * CFire::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size, int nLife)
 	// インスタンス生成
 	CFire *pFire = new CFire;
 
-	if (pFire != NULL)
+	// nullchack
+	if (pFire != nullptr)
 	{
-		// テクスチャの設定
-		pFire->BindTexture(CTexture::GetTexture(CTexture::TEXTURE_NUM_FIRE));
 
 		// 距離の設定
 		int nDis =
@@ -89,11 +89,13 @@ HRESULT CFire::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 	// 初期化処理
 	CBillboard::Init(pos, size);
 
+	CTexture *pTexture = CManager::GetResourceManager()->GetTextureClass();
+
+	// テクスチャの設定
+	BindTexture(pTexture->GetTexture(CTexture::TEXTURE_NUM_FIRE));
+
 	// 縮小
 	m_fScaleNum = SCALE_DOWN;
-
-	// 描画を遅らせる
-//	SetLateDraw();
 
 	return S_OK;
 }
@@ -103,7 +105,7 @@ HRESULT CFire::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 //=============================================================================
 void CFire::Uninit(void)
 {
-	// 2Dポリゴン終了処理
+	// 終了処理
 	CBillboard::Uninit();
 }
 
@@ -115,7 +117,7 @@ void CFire::Update(void)
 	// ライフ減算
 	m_nLife--;
 
-	// 2Dポリゴン更新処理
+	// 更新処理
 	CBillboard::Update();
 
 	// 縮小の処理
@@ -145,14 +147,11 @@ void CFire::Draw(void)
 //=============================================================================
 void CFire::SetColor(D3DXCOLOR col)
 {
-	// バッファ情報を取得
-	LPDIRECT3DVERTEXBUFFER9 pVtxBuff = GetBuff();
-
 	// 頂点情報を設定
 	VERTEX_2D *pVtx;
 
 	// 頂点バッファをロックし、頂点情報へのポインタを取得
-	pVtxBuff->Lock(0, 0, (void**)&pVtx, 0);
+	GetVtxBuff()->Lock(0, 0, (void**)&pVtx, 0);
 
 	// 頂点カラーの設定
 	pVtx[0].col = D3DCOLOR_RGBA(255, 100, 0, 255);	// 左上頂点の色	透明度255
@@ -161,7 +160,7 @@ void CFire::SetColor(D3DXCOLOR col)
 	pVtx[3].col = D3DCOLOR_RGBA(255, 100, 0, 255);	// 右下頂点の色	透明度255
 
 	// 頂点バッファをアンロックする
-	pVtxBuff->Unlock();
+	GetVtxBuff()->Unlock();
 }
 
 //=============================================================================
@@ -169,6 +168,7 @@ void CFire::SetColor(D3DXCOLOR col)
 //=============================================================================
 void CFire::SetLife(int nLife)
 {
+	// ライフの設定をランダムで
 	m_nLife = nLife - rand() % 30;
 }
 

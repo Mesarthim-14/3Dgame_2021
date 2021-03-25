@@ -1,145 +1,191 @@
-//=======================================================================================
+//=============================================================================
 //
-// タイトルクラスの処理 [title.cpp]
+// タイトル処理 [title.cpp]
 // Author : Konishi Yuuto
 //
-//=======================================================================================
+//=============================================================================
 
-//=======================================================================================
-// インクルードファイル
-//=======================================================================================
+//=============================================================================
+// インクルード
+//=============================================================================
 #include "title.h"
-#include "scene2d.h"
-#include "manager.h"
-#include "keyboard.h"
 #include "manager.h"
 #include "renderer.h"
+#include "input.h"
+#include "scene2d.h"
 #include "fade.h"
-#include "title_bg.h"
-#include "titlelogo.h"
+#include "keyboard.h"
+#include "texture.h"
 #include "sound.h"
 #include "joypad.h"
+#include "resource_manager.h"
 
-//=======================================================================================
+//=============================================================================
+// マクロ定義
+//=============================================================================
+#define ROTATION_NUM		(0.1f)		// 回転の速さ
+
+//=============================================================================
 //静的メンバ変数宣言
-//=======================================================================================
-CTitleBg *CTitle::m_pTitleBg = NULL;
-CTitlelogo *CTitle::m_pTitlelogo = NULL;
+//=============================================================================
+LPDIRECT3DTEXTURE9 CTitle::m_pTexture[MAX_TITLE_UI_NUM] = {};
 
-//=======================================================================================
-// タイトルクラスのコンストラクタ
-//=======================================================================================
+//=============================================================================
+//リザルトクラスのコンストラクタ
+//=============================================================================
 CTitle::CTitle(PRIORITY Priority) : CScene(Priority)
 {
+	//メンバ変数のクリア
+	m_pScene2D = NULL;
+	m_pPress = NULL;
+	m_pTitleName = NULL;
 }
 
-//=======================================================================================
-// タイトルクラスのデストラクタ
-//=======================================================================================
+//=============================================================================
+//リザルトクラスのデストラクタ
+//=============================================================================
 CTitle::~CTitle()
 {
-
 }
 
-//=======================================================================================
-// タイトルクラスのクリエイト処理
-//=======================================================================================
-CTitle* CTitle::Create(void)
+//=============================================================================
+//リザルトクラスのクリエイト処理
+//=============================================================================
+CTitle * CTitle::Create(void)
 {
-	// メモリ確保
-	CTitle* pTitle = new CTitle;
+	//リザルトクラスのポインタ変数
+	CTitle *pTitle = new CTitle;
 
+	//メモリが確保できていたら
 	if (pTitle != NULL)
 	{
-		// 初期化処理
-		pTitle->Init(D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f),
-			D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f));
+		//初期化処理呼び出し
+		pTitle->Init(D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f), D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f));
 	}
 
 	return pTitle;
 }
 
-//=======================================================================================
-// タイトルクラスの初期化処理
-//=======================================================================================
-HRESULT CTitle::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
+//=============================================================================
+// タイトルクラスのテクスチャ読み込み処理
+//=============================================================================
+HRESULT CTitle::Load(void)
 {
-	//デバイスの取得
+	//デバイス情報の取得
 	LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
 
-	// タイトル背景の処理
-	if (m_pTitleBg == NULL)
-	{
-		// オブジェクト生成
-		m_pTitleBg = CTitleBg::Create(TITLE_BG_POS, TITLE_BG_SIZE);
-	}
-
-	//// タイトルロゴの処理
-	//if (m_pTitlelogo == NULL)
-	//{
-	//	// オブジェクト生成
-	//	m_pTitlelogo = CTitlelogo::Create(
-	//		D3DXVECTOR3(TITLE_UI_POS_X, TITLE_UI_POS_Y, 0.0f), 
-	//		D3DXVECTOR3(TITLE_UI_SIZE, TITLE_UI_SIZE, 0.0f));
-	//}
-
-	// サウンドの情報
-	CSound *pSound = CManager::GetSound();
-	pSound->Play(CSound::SOUND_LABEL_BGM_TITLE);
+	D3DXCreateTextureFromFile(pDevice, "data/Texture/magic22.jpg", &m_pTexture[0]);
+	D3DXCreateTextureFromFile(pDevice, "data/Texture/StartLogo.png", &m_pTexture[1]);
+	D3DXCreateTextureFromFile(pDevice, "data/Texture/title_name.png", &m_pTexture[2]);
 
 	return S_OK;
 }
 
-//=======================================================================================
-// タイトルクラスの終了処理
-//=======================================================================================
+void CTitle::UnLoad(void)
+{
+	for (int nCount = 0; nCount < MAX_TITLE_UI_NUM; nCount++)
+	{
+		//テクスチャの破棄
+		if (m_pTexture[nCount] != NULL)
+		{
+			m_pTexture[nCount]->Release();
+			m_pTexture[nCount] = NULL;
+		}
+	}
+
+}
+
+//=============================================================================
+//リザルトクラスの初期化処理
+//=============================================================================
+HRESULT CTitle::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
+{
+	if (m_pScene2D == NULL)
+	{
+		//2Dオブジェクトの生成
+		m_pScene2D = CScene2D::Create(pos, size);
+
+		if (m_pScene2D != NULL)
+		{
+			m_pScene2D->BindTexture(m_pTexture[0]);
+		}
+	}
+
+	// PRESSロゴのポインタ
+	if (m_pPress == NULL)
+	{
+		m_pPress = CScene2D::Create(D3DXVECTOR3(pos.x, pos.y + TITLE_PRESS_POS_Y, 0.0f), D3DXVECTOR3(TITLE_PRESS_SIZE_X, TITLE_PRESS_SIZE_Y, 0.0f));
+		m_pPress->BindTexture(m_pTexture[1]);
+	}
+
+	if (m_pTitleName == NULL)
+	{
+		//2Dオブジェクトの生成
+		m_pTitleName = CScene2D::Create(D3DXVECTOR3(pos.x, pos.y - 50.0f, 0.0f), D3DXVECTOR3(TITLE_SIZE_X, TITLE_SIZE_Y, 0.0f));
+
+		if (m_pTitleName != NULL)
+		{
+			m_pTitleName->BindTexture(m_pTexture[2]);
+		}
+
+	}
+	return S_OK;
+}
+
+//=============================================================================
+//リザルトクラスの終了処理
+//=============================================================================
 void CTitle::Uninit(void)
 {
-	// タイトルロゴの処理
-	if (m_pTitlelogo != NULL)
+	if (m_pScene2D != NULL)
 	{
-		// 終了処理
-		m_pTitlelogo = NULL;
+		m_pScene2D->Uninit();
+		m_pScene2D = NULL;
 	}
 
-	// タイトル背景の処理
-	if (m_pTitleBg != NULL)
+	if (m_pTitleName != NULL)
 	{
-		// オブジェクト生成
-		m_pTitleBg = NULL;
+		m_pTitleName->Uninit();
+		m_pTitleName = NULL;
 	}
-
-	//BGMを止める処理
-	CSound *pSound = CManager::GetSound();
-	pSound->Stop(CSound::SOUND_LABEL_BGM_TITLE);
+	
+	if (m_pPress != NULL)
+	{
+		m_pPress->Uninit();
+		m_pPress = NULL;
+	}
 
 	//オブジェクトの破棄
 	Release();
 }
 
-//=======================================================================================
-// タイトルクラスの更新処理
-//=======================================================================================
+//=============================================================================
+//リザルトクラスの更新処理
+//=============================================================================
 void CTitle::Update(void)
 {
 	CInputKeyboard* pKey = CManager::GetKeyboard();
 	CFade::FADE_MODE mode = CManager::GetFade()->GetFade();
-	CSound *pSound = CManager::GetSound();
-	
+	CSound *pSound = CManager::GetResourceManager()->GetSoundClass();
+
 	// コントローラのstartを押したときか、エンターキーを押したとき
-	if (CManager::GetJoypad()->GetJoystickTrigger(CInputJoypad::JOY_BUTTON_START, 0) && mode == CFade::FADE_MODE_NONE 
+	if (CManager::GetJoypad()->GetJoystickTrigger(CInputJoypad::JOY_BUTTON_START, 0) && mode == CFade::FADE_MODE_NONE
 		|| pKey->GetTrigger(DIK_RETURN) && mode == CFade::FADE_MODE_NONE)
 	{
 		CFade *pFade = CManager::GetFade();
-		pFade->SetFade(CManager::MODE_TYPE_TUTORIAL);
-		pSound->Play(CSound::SOUND_LABEL_SE_START);
+		pFade->SetFade(CManager::MODE_TYPE_GAME);
 	}
+
+	if (m_pPress != NULL)
+	{
+	//	m_pPress->SetRotation(ROTATION_NUM);
+	}
+
 }
 
-//=======================================================================================
-// タイトルクラスの描画処理
-//=======================================================================================
+//=============================================================================
+//リザルトクラスの描画処理
+//=============================================================================
 void CTitle::Draw(void)
 {
-
 }

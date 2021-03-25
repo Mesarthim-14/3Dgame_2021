@@ -1,10 +1,9 @@
 //=============================================================================
 //
-// アクション　ブロック処理 [main.cpp]
-// Author :山田陵太
+// メイン処理 [main.cpp]
+// Author :Konishi Yuuto
 //
 //=============================================================================
-
 
 //=============================================================================
 // インクルードファイル
@@ -16,7 +15,7 @@
 // マクロ定義
 //=============================================================================
 #define	CLASS_NAME		"WindowClass"	//ウィンドウクラスの名前
-#define WINDOW_NAME		"VIRTUAL WARS"	//ウィンドウの名前
+#define WINDOW_NAME		"Kobold_Hunter"	//ウィンドウの名前
 
 //=============================================================================
 // プロトタイプ宣言
@@ -26,7 +25,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 //=============================================================================
 // メイン関数
 //=============================================================================
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+#ifdef _DEBUG
+	// メモリリーク見つける君
+	::_CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF | _CRTDBG_ALLOC_MEM_DF);
+#endif
+
 	WNDCLASSEX wcex =
 	{
 		sizeof(WNDCLASSEX),
@@ -79,7 +84,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if (pManager != NULL)
 	{
 		// 初期化処理
-		if (FAILED(pManager->Init(hInstance, hWnd, true)))
+		if (FAILED(pManager->Init(hInstance, hWnd, false)))
 		{
 			return -1;
 		}

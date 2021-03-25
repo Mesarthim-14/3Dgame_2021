@@ -1,11 +1,11 @@
+#ifndef _MAIN_H_
+#define _MAIN_H_
 //=============================================================================
 //
 // メイン処理 [main.h]
 // Author : Konishi Yuuto
 //
 //=============================================================================
-#ifndef _MAIN_H_
-#define _MAIN_H_
 #define _CRT_SECURE_NO_WARNINGS
 
 //=============================================================================
@@ -41,8 +41,17 @@
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib,"winmm.lib")
 #pragma comment(lib,"dinput8.lib")	//入力処理に必要
-//#pragma comment(lib, "dxguid.lib")
 #pragma comment (lib,"ws2_32.lib")
+
+// メモリリーク
+#ifdef _DEBUG
+#define   new                   new(_NORMAL_BLOCK, __FILE__, __LINE__)
+#define   malloc(s)             _malloc_dbg(s, _NORMAL_BLOCK, __FILE__, __LINE__)
+#define   calloc(c, s)          _calloc_dbg(c, s, _NORMAL_BLOCK, __FILE__, __LINE__)
+#define   realloc(p, s)         _realloc_dbg(p, s, _NORMAL_BLOCK, __FILE__, __LINE__)
+#define   _recalloc(p, c, s)    _recalloc_dbg(p, c, s, _NORMAL_BLOCK, __FILE__, __LINE__)
+#define   _expand(p, s)         _expand_dbg(p, s, _NORMAL_BLOCK, __FILE__, __LINE__)
+#endif
 
 //=============================================================================
 // マクロ定義
@@ -51,10 +60,16 @@
 #define	WINDOW_POS_Y	(0)
 #define SCREEN_WIDTH	(1280)
 #define SCREEN_HEIGHT	(720)
-#define FVF_VERTEX_3D (D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE| D3DFVF_TEX1)	//座標・法線・カラー
-#define FVF_VERTEX_2D (D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1) //頂点フォーマット
-#define NUM_VERTEX (4)	//頂点数
-#define NUM_POLYGON (2)	//ポリゴン数
+#define FVF_VERTEX_3D (D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE| D3DFVF_TEX1)	// 座標・法線・カラー
+#define FVF_VERTEX_2D (D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1)				// 頂点フォーマット
+#define NUM_VERTEX		(4)															// 頂点数
+#define VERTEX_TRIANGLE	(3)															// 三角形の頂点数
+#define NUM_POLYGON		(2)															// ポリゴン数
+
+// 初期化用マクロ変数
+#define ZeroVector2		(D3DXVECTOR2(0.0f, 0.0f))
+#define ZeroVector3		(D3DXVECTOR3(0.0f, 0.0f, 0.0f))
+#define WhiteColor		(D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f))
 
 //=============================================================================
 //構造体定義

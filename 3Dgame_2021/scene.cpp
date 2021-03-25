@@ -1,6 +1,6 @@
 //=============================================================================
 //
-// オブジェクト処理 [scene.cpp]
+// シーンクラス処理 [scene.cpp]
 // Author : Konishi Yuuto
 //
 //=============================================================================
@@ -36,8 +36,8 @@ CScene::CScene(PRIORITY Priority)
 		//先頭オブジェクトに自身のポインタを設定する
 		m_pTop[m_nPriority] = this;
 
-		//先頭のため、前情報をNULLでクリアする
-		m_pPrev = NULL;
+		//先頭のため、前情報をnullptrでクリアする
+		m_pPrev = nullptr;
 	}
 
 	//現在オブジェクトが確保されていなかった場合
@@ -53,8 +53,8 @@ CScene::CScene(PRIORITY Priority)
 	//現在オブジェクトが自分だった場合
 	if (m_pCur[m_nPriority] == this)
 	{
-		//前情報にNULLを入れる
-		m_pPrev = NULL;
+		//前情報にnullptrを入れる
+		m_pPrev = nullptr;
 	}
 	else
 	{
@@ -66,7 +66,7 @@ CScene::CScene(PRIORITY Priority)
 	m_pCur[m_nPriority] = this;
 
 	//自身の次情報をクリアする
-	m_pNext = NULL;
+	m_pNext = nullptr;
 
 }
 
@@ -85,12 +85,14 @@ void CScene::UpdateAll(void)
 	//ポーズしているか　bool pause = m_pause   ->>  pause =true ->> if (type == OBJTYPE_PAUSE)
 	for (int nCount = 0; nCount < PRIORITY_MAX; nCount++)
 	{
-		if (m_pTop[nCount] != NULL)
+		if (m_pTop[nCount] != nullptr)
 		{
+			// 先頭シーン
 			CScene *pScene = m_pTop[nCount];
 
 			do
 			{
+				// 次のシーンを取得
 				CScene *pSceneCur = pScene->m_pNext;
 
 				// 死亡フラグがないとき
@@ -99,16 +101,20 @@ void CScene::UpdateAll(void)
 					// 更新処理
 					pScene->Update();
 				}
+
+				// 次のシーンへ
 				pScene = pSceneCur;
 
-			} while (pScene != NULL);
+			} while (pScene != nullptr);
 		}
 	}
 
 	for (int nCount = 0; nCount < PRIORITY_MAX; nCount++)
 	{
-		if (m_pTop[nCount] != NULL)
+		// !nullcheck
+		if (m_pTop[nCount] != nullptr)
 		{
+			// 先頭のシーンを確保
 			CScene *pScene = m_pTop[nCount];
 
 			do
@@ -121,9 +127,10 @@ void CScene::UpdateAll(void)
 					pScene->DeathRelease();
 				}
 
+				// 次のシーンへ
 				pScene = pSceneCur;
 
-			} while (pScene != NULL);
+			} while (pScene != nullptr);
 		}
 	}
 }
@@ -135,11 +142,14 @@ void CScene::DrawAll(void)
 {
 	for (int nCount = 0; nCount < PRIORITY_MAX; nCount++)
 	{
-		if (m_pTop[nCount] != NULL)
+		// !nullcheck
+		if (m_pTop[nCount] != nullptr)
 		{
+			// 先頭を取得
 			CScene *pScene = m_pTop[nCount];
 			do
 			{
+				// 次のシーン取得
 				CScene *pSceneCur = pScene->m_pNext;
 
 				// 死亡フラグがない時
@@ -148,9 +158,10 @@ void CScene::DrawAll(void)
 					pScene->Draw();
 				}
 
+				// 次のシーンへ
 				pScene = pSceneCur;
 
-			} while (pScene != NULL);
+			} while (pScene != nullptr);
 		}
 	}
 }
@@ -162,14 +173,46 @@ void CScene::ReleaseAll(void)
 {
 	for (int nCount = 0; nCount < PRIORITY_MAX; nCount++)
 	{
+		// 先頭を取得
 		CScene *pScene = m_pTop[nCount];
-		while (pScene != NULL)
+
+		while (pScene != nullptr)
 		{
+			// 次のシーン取得
 			CScene *pCurScene = pScene->m_pNext;
 
+			// シーンの終了処理
 			pScene->Uninit();
 
+			// 次のシーンへ
 			pScene = pCurScene;
+		}
+	}
+
+	for (int nCount = 0; nCount < PRIORITY_MAX; nCount++)
+	{
+		// !nullcheck
+		if (m_pTop[nCount] != nullptr)
+		{
+			// 先頭のシーン
+			CScene *pScene = m_pTop[nCount];
+
+			do
+			{
+				// 次のシーン取得
+				CScene *pSceneCur = pScene->m_pNext;
+
+				// 死亡フラグがあったら
+				if (pScene->m_bDeath == true)
+				{
+					// 死亡フラグの処理
+					pScene->DeathRelease();
+				}
+
+				// 次のシーンへ
+				pScene = pSceneCur;
+
+			} while (pScene != nullptr);
 		}
 	}
 }
@@ -205,22 +248,19 @@ void CScene::DeathRelease(void)
 			m_pCur[nCount] = m_pPrev;
 		}
 
-		if (m_pPrev != NULL)
+		// 前後のシーンを繋げる処理
+		if (m_pPrev != nullptr)
 		{
 			m_pPrev->m_pNext = m_pNext;
 		}
-		if (m_pNext != NULL)
+		if (m_pNext != nullptr)
 		{
 			m_pNext->m_pPrev = m_pPrev;
 		}
 	}
 
+	// 自身をdelete
 	delete this;
-}
-
-CScene * CScene::GetNext(void)
-{
-	return m_pNext;
 }
 
 //=============================================================================
@@ -229,6 +269,15 @@ CScene * CScene::GetNext(void)
 CScene * CScene::GetTop(int nNum)
 {
 	return m_pTop[nNum];
+}
+
+
+//=============================================================================
+// 次のシーン情報
+//=============================================================================
+CScene * CScene::GetNext(void)
+{
+	return m_pNext;
 }
 
 //=============================================================================

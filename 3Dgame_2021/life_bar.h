@@ -33,18 +33,18 @@
 class CLifeBar : public CGage
 {
 public:
-	CLifeBar(PRIORITY Priority = PRIORITY_1);		// コンストラクタ
-	~CLifeBar();									// デストラクタ
+	CLifeBar(PRIORITY Priority = PRIORITY_1);										// コンストラクタ
+	~CLifeBar();																	// デストラクタ
 
 	static CLifeBar *Create(D3DXVECTOR3 pos, D3DXVECTOR3 size, D3DXCOLOR color,
-		CCharacter::CHARACTER_TYPE Ctype, int nLife);													// ポリゴン生成
+		CCharacter::CHARACTER_TYPE Ctype, int nLife);								// ポリゴン生成
 
-	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);				// 初期化処理
-	void Uninit(void);												// 終了処理
-	void Update(void);												// 更新処理
-	void Draw(void);												// 描画処理
+	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);								// 初期化処理
+	void Uninit(void);																// 終了処理
+	void Update(void);																// 更新処理
+	void Draw(void);																// 描画処理
 
-	void ColorChange(void);											// カラーの変更
+	void ColorChange(void);															// カラーの変更
 private:
 	CCharacter::CHARACTER_TYPE m_Ctype;		// タイプ
 };

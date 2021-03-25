@@ -2,7 +2,7 @@
 #define _BG_H_
 //=============================================================================
 //
-// ゲーム背景の処理 [bg.h]
+// ゲーム背景クラスヘッダー [bg.h]
 // Author : Konishi Yuuto
 //
 //=============================================================================
@@ -16,9 +16,12 @@
 //=============================================================================
 // マクロ定義
 //=============================================================================
-#define BG_SIZE_X				(1000)		// 大きさ
-#define BG_SIZE_Y				(500)		// 大きさ
-#define BG_SIZE_Z				(1000)		// 大きさ
+#define BG_POS		(ZeroVector3)	// 座標
+
+#define BG_SIZE_X	(30.0f)			// 大きさ
+#define BG_SIZE_Y	(30.0f)			// 大きさ
+#define BG_SIZE_Z	(30.0f)			// 大きさ
+#define BG_SIZE		(D3DXVECTOR3(BG_SIZE_X, BG_SIZE_Y, BG_SIZE_Z))		// 大きさ
 
 //=============================================================================
 // 背景クラス
@@ -29,18 +32,14 @@ public:
 	CBg();		// コンストラクタ
 	~CBg();		// デストラクタ
 
-	HRESULT Init(void);		// 初期化処理
-	void Uninit(void);		// 終了処理
-	void Update(void);		// 更新処理
-	void Draw(void);		// 描画処理
+	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);		// 初期化処理
+	void Uninit(void);										// 終了処理
+	void Update(void);										// 更新処理
+	void Draw(void);										// 描画処理
 
-	static CBg *Create(void);		// インスタンス生成
+	static CBg *Create(D3DXVECTOR3 pos, D3DXVECTOR3 size);	// インスタンス生成
 
 private:
-	D3DXVECTOR3 m_pos;										// 現在の位置
-	D3DXVECTOR3 m_rot;										// 現在の角度
-	D3DXVECTOR3 m_size;										// 大きさ
-	D3DXMATRIX m_mtxWorld;									// 行列計算用
 };
 
 #endif

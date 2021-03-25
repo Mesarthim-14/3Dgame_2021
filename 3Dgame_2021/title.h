@@ -1,49 +1,62 @@
-#ifndef _TITLE_H_
-#define _TITLE_H_
+#ifndef _TITLET_H_
+#define _TITLET_H_
 //=============================================================================
 //
-// タイトルクラスヘッダー [title.h]
+// タイトル処理 [title.h]
 // Author : Konishi Yuuto
 //
 //=============================================================================
 
 //=============================================================================
-// インクルードファイル
+//インクルードファイル
 //=============================================================================
 #include "scene.h"
 
 //=============================================================================
 // マクロ定義
 //=============================================================================
+#define TITLE_UI_SIZE			(700.0f)	// UIサイズ
+#define TITLE_UI_POS_X			(640.0f)	// UIのX座標
+#define TITLE_UI_POS_Y			(360.0f)	// UIのY座標
+
+#define TITLE_SIZE_X			(500.0f)	// タイトルのXサイズ
+#define TITLE_SIZE_Y			(170.0f)	// タイトルのYサイズ
+#define TITLE_POS_X				(640.0f)	// タイトルのX座標
+#define TITLE_POS_Y				(350.0f)	// タイトルのY座標
+
+#define TITLE_PRESS_SIZE_X		(400.0f)	// PRESSサイズ
+#define TITLE_PRESS_SIZE_Y		(30.0f)		// PRESSサイズ
+#define TITLE_PRESS_POS_X		(640.0f)	// PRESSのX座標
+#define TITLE_PRESS_POS_Y		(260.0f)	// PRESSのY座標
+
+#define MAX_TITLE_UI_NUM		(3)			// UIの数
 
 //=============================================================================
-// 前方宣言
+//前方宣言
 //=============================================================================
-class CTitleBg;
-class CTitlelogo;
+class CScene2D;
 
 //=============================================================================
-// タイトルクラス
+//リザルトクラス
 //=============================================================================
 class CTitle : public CScene
 {
 public:
 	CTitle(PRIORITY Priority = PRIORITY_0);					// コンストラクタ
-	~CTitle();											// デストラクタ
+	~CTitle();												// デストラクタ
 
-	static CTitle* Create(void);						// オブジェクト生成関数
-	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);	// 初期化処理
-	void Uninit(void);									// 終了処理
-	void Update(void);									// 更新処理
-	void Draw(void);									// 描画処理
-	
-	// Get関数
-	static CTitleBg *GetTitleBg(void) { return m_pTitleBg; }	// タイトルロゴの情報
-	static CTitlelogo *GetTitleLogo(void) { return m_pTitlelogo; }	// タイトルロゴの情報
+	static CTitle* Create(void);							// インスタンス生成
+	static HRESULT Load(void);								// テクスチャロード
+	static void UnLoad(void);								// テクスチャアンロード
 
+	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);		// 初期化処理
+	void Uninit(void);										// 終了処理
+	void Update(void);										// 更新処理
+	void Draw(void);										// 描画処理
 private:
-	static CTitleBg *m_pTitleBg;		// タイトル背景のポインタ
-	static CTitlelogo *m_pTitlelogo;	// タイトルロゴのポインタ
+	static LPDIRECT3DTEXTURE9 m_pTexture[MAX_TITLE_UI_NUM];	// テクスチャのポインタ
+	CScene2D* m_pScene2D;									// シーン2Dのポインタ
+	CScene2D* m_pPress;										// シーン2Dのポインタ
+	CScene2D* m_pTitleName;									// シーン2Dのポインタ
 };
-
-#endif // !_TITEL_H_
+#endif

@@ -11,19 +11,23 @@
 #include "bg.h"
 #include "manager.h"
 #include "renderer.h"
+#include "texture.h"
 #include "xfile.h"
+#include "resource_manager.h"
 
 //=================================================================================
 // インスタンス生成
 //=================================================================================
-CBg * CBg::Create(void)
+CBg * CBg::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
+	// メモリ確保
 	CBg *pBg = new CBg;
 
-	if (pBg != NULL)
+	// !nullcheck
+	if (pBg != nullptr)
 	{
 		// 初期化処理
-		pBg->Init();
+		pBg->Init(pos, size);
 	}
 
 	return pBg;
@@ -34,10 +38,7 @@ CBg * CBg::Create(void)
 //=================================================================================
 CBg::CBg()
 {
-	m_pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_rot = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_size = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	D3DXMatrixIdentity(&m_mtxWorld);
+
 }
 
 //=================================================================================
@@ -50,22 +51,20 @@ CBg::~CBg()
 //=================================================================================
 // 初期化処理
 //=================================================================================
-HRESULT CBg::Init(void)
+HRESULT CBg::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
-
-//	model.dwNumMat = m_nNumMat;
-//	model.pBuffMat = m_pBuffMat;
-//	model.pMesh = m_pMesh;
+	// Xファイルのポインタ
+	CXfile *pXFile = CManager::GetResourceManager()->GetXfileClass();
 
 	//モデル情報を設定
-	CModel::BindModel(CXfile::GetXfile(CXfile::XFILE_NUM_BG));
+	BindModel(pXFile->GetXfile(CXfile::XFILE_NUM_BG));
+	BindTexture(pXFile->GetXfileTexture(CXfile::XFILE_NUM_BG));
 
-	m_pos = D3DXVECTOR3(0.0f, 1000.0f, 0.0f);
-	m_rot = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_size = D3DXVECTOR3(BG_SIZE_X, BG_SIZE_Y, BG_SIZE_Z);
+	// 初期化処理
+	CModel::Init(pos, size);
 
 	// 座標情報を与える
-	CModel::SetPos(m_pos);
+	CModel::SetPos(pos);
 
 	return S_OK;
 }
@@ -91,81 +90,23 @@ void CBg::Update(void)
 //=================================================================================
 void CBg::Draw(void)
 {
-//	// Rendererクラスからデバイスを取得
-//	LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
-//
-//	D3DXMATRIX mtxRot, mtxTrans, mtxScale;	
-//	D3DMATERIAL9 matDef;					// 現在のマテリアル保持用
-//	D3DXMATERIAL* pMat;						// マテリアルデータへのポインタ
-//	DWORD ambient;
-//
-//	pDevice->GetRenderState(D3DRS_AMBIENT, &ambient);
-//	pDevice->SetRenderState(D3DRS_AMBIENT, 0xffffffff);
-//
-//	pDevice->LightEnable(0, FALSE);
-//
-//	// ワールドマトリックスの初期化
-//	D3DXMatrixIdentity(&m_mtxWorld);
-//
-//	//// スケールを反映
-//	D3DXMatrixScaling(&mtxScale,
-//		m_size.x,
-//		m_size.y,
-//		m_size.z);
-//	D3DXMatrixMultiply(&m_mtxWorld, &m_mtxWorld, &mtxScale);
-//
-//	// 向きを反映
-//	D3DXMatrixRotationYawPitchRoll(&mtxRot,
-//		m_rot.y,
-//		m_rot.x,
-//		m_rot.z);
-//	D3DXMatrixMultiply(&m_mtxWorld, &m_mtxWorld, &mtxRot);
-//
-//	// 位置を反映
-//	D3DXMatrixTranslation(&mtxTrans,
-//		m_pos.x,
-//		m_pos.y,
-//		m_pos.z);
-//	D3DXMatrixMultiply(&m_mtxWorld, &m_mtxWorld, &mtxTrans);
-//
-//	// ワールドマトリックスの設定
-//	pDevice->SetTransform(D3DTS_WORLD, &m_mtxWorld);
-//
-//	// テクスチャの設定
-//	pDevice->SetTexture(0, m_apTexture[0]);
-//
-//	// 現在のマテリアルを取得する
-//	pDevice->GetMaterial(&matDef);
-//
-//	// マテリアルデータへのポインタを取得
-//	pMat = (D3DXMATERIAL*)m_pBuffMat->GetBufferPointer();
-//
-//	for (int nCntMat = 0; nCntMat < (int)m_nNumMat; nCntMat++)
-//	{
-//		pMat[nCntMat].MatD3D.Ambient.r = 1.0f;
-//		pMat[nCntMat].MatD3D.Ambient.g = 1.0f;
-//		pMat[nCntMat].MatD3D.Ambient.b = 1.0f;
-//		pMat[nCntMat].MatD3D.Ambient.a = 1.0f;
-//
-//		// テクスチャの設定
-//		pDevice->SetTexture(0, m_apTexture[0]);
-//
-//		// マテリアルの設定
-//		pDevice->SetMaterial(&pMat[nCntMat].MatD3D);
-//
-//		// モデルパーツ
-//		m_pMesh->DrawSubset(nCntMat);
-//	}
-//
-//	// 保持していたマテリアルを戻す
-//	pDevice->SetMaterial(&matDef);
-//
-//	pDevice->SetRenderState(D3DRS_AMBIENT, ambient);
-//	pDevice->LightEnable(0, TRUE);
-//
-//	// テクスチャの設定
-//	pDevice->SetTexture(0, NULL);
+	// Rendererクラスからデバイスを取得
+	LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
 
-	// 描画処理
-//	CModel::Draw();
+	D3DXMATERIAL*pMat;		//マテリアルデータへのポインタ
+
+	//マテリアルデータへのポインタを取得
+	pMat = (D3DXMATERIAL*)GetBuffMat()->GetBufferPointer();
+
+	for (int nCntMat = 0; nCntMat < (int)GetNumMat(); nCntMat++)
+	{
+		// ライトの効果を消す処理
+		pDevice->LightEnable(0, false);
+
+		// 描画処理
+		CModel::Draw();
+
+		// ライトの効果を付けなおす
+		pDevice->LightEnable(0, true);
+	}
 }

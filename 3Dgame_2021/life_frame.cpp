@@ -12,10 +12,8 @@
 #include "renderer.h"
 #include "manager.h"
 #include "texture.h"
+#include "resource_manager.h"
 
-//=============================================================================
-// マクロ定義
-//=============================================================================
 //=============================================================================
 // コンストラクタ
 //=============================================================================
@@ -37,7 +35,7 @@ CLifeFrame::~CLifeFrame()
 //=============================================================================
 CLifeFrame *CLifeFrame::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
-	// メモ位確保
+	// メモリ確保
 	CLifeFrame *pLifeFrame = new CLifeFrame;
 
 	// 初期化処理
@@ -52,35 +50,10 @@ CLifeFrame *CLifeFrame::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 HRESULT CLifeFrame::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
 	// 初期化処理
-	CUi::Init(pos, size);
-	BindTexture(CTexture::GetTexture(CTexture::TEXTURE_NUM_GAGEFLAME));
+	CUi::Init(pos, size);												// 座標、サイズ
+
+	CTexture *pTexture = CManager::GetResourceManager()->GetTextureClass();
+	BindTexture(pTexture->GetTexture(CTexture::TEXTURE_NUM_GAGEFLAME));	// テクスチャ設定
 
 	return S_OK;
-}
-
-//=============================================================================
-// 終了処理
-//=============================================================================
-void CLifeFrame::Uninit(void)
-{
-	// 終了処理
-	CUi::Uninit();
-}
-
-//=============================================================================
-// 更新処理
-//=============================================================================
-void CLifeFrame::Update(void)
-{
-	// 更新処理
-	CUi::Update();
-}
-
-//=============================================================================
-// 描画処理
-//=============================================================================
-void CLifeFrame::Draw(void)
-{
-	// 描画処理
-	CUi::Draw();
 }

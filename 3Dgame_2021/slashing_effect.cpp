@@ -12,11 +12,7 @@
 #include "manager.h"
 #include "renderer.h"
 #include "xfile.h"
-
-//=============================================================================
-// マクロ定義
-//=============================================================================
-#define MAX_SLASH_LOCUS_EFFECT_TEXTURE	(1)		// 最大数
+#include "resource_manager.h"
 
 //=============================================================================
 // コンストラクタ
@@ -58,42 +54,13 @@ HRESULT CSlashingEffect::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
 	// 初期化処理
 	CModel::Init(D3DXVECTOR3(pos.x, pos.y - 200.0f, pos.z), size);
-	BindModel(CXfile::GetXfile(CXfile::XFILE_NUM_SWORD_LOCUS_EFFECT));
-	BindTexture(CXfile::GetXfileTexture(CXfile::XFILE_NUM_SWORD_LOCUS_EFFECT));
+
+	// Xファイルのポインタ
+	CXfile *pXFile = CManager::GetResourceManager()->GetXfileClass();
+
+	// Xファイルの設定
+	BindModel(pXFile->GetXfile(CXfile::XFILE_NUM_SWORD_LOCUS_EFFECT));				// モデル情報
+	BindTexture(pXFile->GetXfileTexture(CXfile::XFILE_NUM_SWORD_LOCUS_EFFECT));		// テクスチャ情報
 
 	return S_OK;
-}
-
-//=============================================================================
-// 終了処理
-//=============================================================================
-void CSlashingEffect::Uninit(void)
-{
-	// 終了処理
-	CModel::Uninit();
-}
-
-//=============================================================================
-// 更新処理
-//=============================================================================
-void CSlashingEffect::Update(void)
-{
-	// 更新処理
-	CModel::Update();
-
-	// もしテクスチャのパターン数が最大数を超えたら
-//	if (GetTexPattern() >= MAX_SLASH_LOCUS_EFFECT_TEXTURE)
-	{
-		// 終了処理
-	//	Uninit();
-	}
-}
-
-//=============================================================================
-// 描画処理
-//=============================================================================
-void CSlashingEffect::Draw(void)
-{
-	// 描画処理
-	CModel::Draw();
 }

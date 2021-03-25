@@ -1,8 +1,12 @@
 //=============================================================================
 //
-// リザルト処理 [result.cpp]
-// Author : 山田陵太
+// リザルトクラス処理 [result.cpp]
+// Author : Konishi Yuuto
 //
+//=============================================================================
+
+//=============================================================================
+// インクルード
 //=============================================================================
 #include "result.h"
 #include "manager.h"
@@ -11,6 +15,8 @@
 #include "scene2d.h"
 #include "fade.h"
 #include "keyboard.h"
+#include "joypad.h"
+#include "resource_manager.h"
 
 //=============================================================================
 //静的メンバ変数宣言
@@ -64,6 +70,21 @@ HRESULT CResult::Load(void)
 	return S_OK;
 }
 
+void CResult::UnLoad(void)
+{
+	for (int nCount = 0; nCount < 1; nCount++)
+	{
+		//テクスチャの破棄
+		if (m_pTexture[nCount] != NULL)
+		{
+			m_pTexture[nCount]->Release();
+			m_pTexture[nCount] = NULL;
+		}
+	}
+
+}
+
+
 //=============================================================================
 //リザルトクラスの初期化処理
 //=============================================================================
@@ -99,17 +120,16 @@ void CResult::Uninit(void)
 //=============================================================================
 void CResult::Update(void)
 {
-	CInputKeyboard *pKey = CManager::GetKeyboard();
-	CFade *pFade = CManager::GetFade();
+	CInputKeyboard* pKey = CManager::GetKeyboard();
+	CFade::FADE_MODE mode = CManager::GetFade()->GetFade();
+	CSound *pSound = CManager::GetResourceManager()->GetSoundClass();
 
-	if (pKey->GetTrigger(DIK_RETURN))
+	// コントローラのstartを押したときか、エンターキーを押したとき
+	if (CManager::GetJoypad()->GetJoystickTrigger(CInputJoypad::JOY_BUTTON_START, 0) && mode == CFade::FADE_MODE_NONE
+		|| pKey->GetTrigger(DIK_RETURN) && mode == CFade::FADE_MODE_NONE)
 	{
-		if (pFade != NULL)
-		{
-			pFade->SetFade(CManager::MODE_TYPE_TITLE);
-		}
-
-//		Uninit();
+		CFade *pFade = CManager::GetFade();
+		pFade->SetFade(CManager::MODE_TYPE_TITLE);
 	}
 }
 

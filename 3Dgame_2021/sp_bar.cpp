@@ -18,8 +18,8 @@
 // マクロ定義
 //=========================================================
 #define DECREASE_SP_SPEED		(1)		// 体力を減らす速度
-#define REGENE_FLAME			(25)	// リジェネのフレーム
-#define REGENE_NUM				(5)		// リジェネの値
+#define REGENE_FLAME			(30)	// リジェネのフレーム
+#define REGENE_NUM				(3)		// リジェネの値
 
 //=========================================================
 // ポリゴン生成
@@ -57,8 +57,8 @@ CSpBar::~CSpBar()
 HRESULT CSpBar::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
 	// 初期化処理
-	CGage::Init(pos, size);
-	SetColor(D3DCOLOR_RGBA(230, 0, 255, 255));
+	CGage::Init(pos, size);						// 座標・サイズ
+	SetColor(D3DCOLOR_RGBA(230, 0, 255, 255));	// 色の設定
 
 	return S_OK;
 }

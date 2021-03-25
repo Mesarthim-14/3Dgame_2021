@@ -1,6 +1,6 @@
 //=============================================================================
 //
-// 3Dポリゴンクラス [scene3D.cpp]
+// シーン3Dクラス [scene3D.cpp]
 // Author : Konishi Yuuto
 //
 //=============================================================================
@@ -15,13 +15,18 @@
 //=============================================================================
 // コンストラクタ
 //=============================================================================
-CScene3D::CScene3D(PRIORITY Priority) : CScene(Priority)
+CScene3D::CScene3D(PRIORITY Priority) : CSceneBase(Priority)
 {
-	m_pTexture = NULL;
-	m_pVtxBuff = NULL;
-	m_pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_rot = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_size = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+	m_nCountAnim = 0;								// アニメーションテクスチャ
+	m_nCountAnimPattern = 0;						// アニメーションのパターン
+	m_nCounterAnim = 0;								// アニメーションのカウンター
+	m_nPatternAnim = 0;								// アニメーションのパターン数
+	m_nLoop = -1;									// ループするかどうか
+	m_fScaleNum = 0.0f;								// スケール
+	m_nAlphaTestNum = 0;								// アルファテストの値 
+	m_bAlpha = false;								// アルファテストのフラグ
+	m_bInverse = false;
+	m_fAlphaNum = 0.0f;
 }
 
 //=============================================================================
@@ -40,28 +45,31 @@ HRESULT CScene3D::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 	//デバイスの取得
 	LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
 
+	// 頂点バッファ変数の宣言
+	LPDIRECT3DVERTEXBUFFER9 pVtxBuff;
+
 	//頂点バッファの生成
 	pDevice->CreateVertexBuffer(sizeof(VERTEX_3D)*NUM_VERTEX,
 		D3DUSAGE_WRITEONLY,
 		FVF_VERTEX_3D,
 		D3DPOOL_MANAGED,
-		&m_pVtxBuff,
-		NULL);
+		&pVtxBuff,
+		nullptr);
 
-	VERTEX_3D*pVtx = NULL;
+	VERTEX_3D*pVtx = nullptr;
 
 	// 変数代入
-	m_pos = pos;
-	m_size = size;
+	SetPos(pos);
+	SetSize(size);
 
 	//頂点バッファをロック
-	m_pVtxBuff->Lock(0, 0, (void**)&pVtx, 0);
+	pVtxBuff->Lock(0, 0, (void**)&pVtx, 0);
 
 	//頂点座標設定の設定
-	pVtx[0].pos = D3DXVECTOR3(- (m_size.x / 2), + (m_size.y / 2), 0.0f);
-	pVtx[1].pos = D3DXVECTOR3(+ (m_size.x / 2), + (m_size.y / 2), 0.0f);
-	pVtx[2].pos = D3DXVECTOR3(- (m_size.x / 2), - (m_size.y / 2), 0.0f);
-	pVtx[3].pos = D3DXVECTOR3(+ (m_size.x / 2), - (m_size.y / 2), 0.0f);
+	pVtx[0].pos = D3DXVECTOR3(-(size.x / 2), +(size.y / 2), +(size.z / 2));
+	pVtx[1].pos = D3DXVECTOR3(+(size.x / 2), +(size.y / 2), +(size.z / 2));
+	pVtx[2].pos = D3DXVECTOR3(-(size.x / 2), -(size.y / 2), -(size.z / 2));
+	pVtx[3].pos = D3DXVECTOR3(+(size.x / 2), -(size.y / 2), -(size.z / 2));
 
 	//各頂点の法線の設定（※ベクトルの大きさは１にする必要がある）
 	pVtx[0].nor = D3DXVECTOR3(0.0f, 1.0f, 0.0f);
@@ -82,7 +90,10 @@ HRESULT CScene3D::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 	pVtx[3].tex = D3DXVECTOR2(1.0f, 1.0f);
 	
 	//頂点バッファのアンロック
-	m_pVtxBuff->Unlock();
+	pVtxBuff->Unlock();
+
+	// バッファの設定
+	BindVtxBuff(pVtxBuff);
 
 	return S_OK;
 }
@@ -92,13 +103,6 @@ HRESULT CScene3D::Init(const D3DXVECTOR3 pos, const D3DXVECTOR3 size)
 //=============================================================================
 void CScene3D::Uninit(void)
 {
-	//頂点バッファの破棄
-	if (m_pVtxBuff != NULL)
-	{
-		m_pVtxBuff->Release();
-		m_pVtxBuff = NULL;
-	}
-
 	//オブジェクト破棄
 	Release();
 }
@@ -108,7 +112,12 @@ void CScene3D::Uninit(void)
 //=============================================================================
 void CScene3D::Update(void)
 {
-
+	// アニメーションの設定がされたとき
+	if (m_nPatternAnim != 0)
+	{
+		// アニメーションを更新する
+		UpdateAnimation();
+	}
 }
 
 //=============================================================================
@@ -121,42 +130,109 @@ void CScene3D::Draw(void)
 
 	D3DXMATRIX mtxRot, mtxTrans;	//計算用のマトリクス
 
+	D3DXCOLOR col = GetColor();
+
+	// 色の設定
+	D3DMATERIAL9 material, OldMaterial;
+	ZeroMemory(&material, sizeof(D3DMATERIAL9));
+	material.Ambient = col;
+	material.Diffuse = col;
+	material.Ambient.a =  col.a - m_fAlphaNum;
+	material.Diffuse.a =  col.a - m_fAlphaNum;
+
+	pDevice->GetMaterial(&OldMaterial);
+	pDevice->SetMaterial(&material);
+	pDevice->SetRenderState(D3DRS_AMBIENT, 0x44444444);
+
+	// アルファテストを有力化
+	pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
+
+	// アルファテストが有効なら
+	if (m_bAlpha == true)
+	{
+		pDevice->SetRenderState(D3DRS_ALPHAREF, 0xC0);
+		pDevice->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATEREQUAL);
+	}
+	else
+	{
+		// アルファテスト基準値の設定
+		pDevice->SetRenderState(D3DRS_ALPHAREF, m_nAlphaTestNum);
+	}
+
+	// 加算合成
+	if (m_bBlend == true)
+	{
+		// 加算合成を行う
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);			// aデスティネーションカラー
+	}
+
 	//ワールドマトリクスの初期化
 	D3DXMatrixIdentity(&m_mtxWorld);
 
-	//向きを反映
-	D3DXMatrixRotationYawPitchRoll(&mtxRot, m_rot.y, m_rot.x, m_rot.z);
-	D3DXMatrixMultiply(&m_mtxWorld, &m_mtxWorld, &mtxRot);
+	if (m_bInverse == false)
+	{
+		D3DXVECTOR3 rot = GetRot();
+
+		//向きを反映
+		D3DXMatrixRotationYawPitchRoll(&mtxRot, rot.y, rot.x, rot.z);
+		D3DXMatrixMultiply(&m_mtxWorld, &m_mtxWorld, &mtxRot);
+	}
+	else
+	{
+		// 回転の逆行列の生成
+		pDevice->GetTransform(D3DTS_VIEW, &mtxRot);
+		D3DXMatrixInverse(&m_mtxWorld, nullptr,
+			&mtxRot);
+
+		m_mtxWorld._41 = 0;
+		m_mtxWorld._42 = 0;
+		m_mtxWorld._43 = 0;
+	}
+
+	D3DXVECTOR3 pos = GetPos();
 
 	//位置を反映
-	D3DXMatrixTranslation(&mtxTrans, m_pos.x, m_pos.y, m_pos.z);
+	D3DXMatrixTranslation(&mtxTrans, pos.x, pos.y, pos.z);
 	D3DXMatrixMultiply(&m_mtxWorld, &m_mtxWorld, &mtxTrans);
 
 	//ワールドマトリックスの設定
 	pDevice->SetTransform(D3DTS_WORLD, &m_mtxWorld);
 
 	//頂点バッファをデバイスのデータストリームに設定
-	pDevice->SetStreamSource(0, m_pVtxBuff, 0, sizeof(VERTEX_3D));
+	pDevice->SetStreamSource(0, GetVtxBuff(), 0, sizeof(VERTEX_3D));
 
 	//頂点フォーマットの設定
 	pDevice->SetFVF(FVF_VERTEX_3D);
 
 	//テクスチャの設定
-	pDevice->SetTexture(0, m_pTexture);
+	pDevice->SetTexture(0, GetTexture());
 
 	//ポリゴンの描画
 	pDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, NUM_POLYGON);
 
+	// アルファテストが有効でなかったら
+	if (m_bAlpha != true)
+	{
+		// アルファテスト基準値の設定
+		pDevice->SetRenderState(D3DRS_ALPHAREF, 0);
+	}
+
+	// 加算合成が有効なら
+	if (m_bBlend == true)
+	{
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);	// aデスティネーションカラー
+	}
+
 	//テクスチャの設定
-	pDevice->SetTexture(0, NULL);
+	pDevice->SetTexture(0, nullptr);
 }
 
 //=============================================================================
-// 座標設定
+// 移動量
 //=============================================================================
-void CScene3D::SetPos(D3DXVECTOR3 pos)
+void CScene3D::SetMove(D3DXVECTOR3 move)
 {
-	m_pos = pos;
+	m_move = move;
 }
 
 //=============================================================================
@@ -164,22 +240,25 @@ void CScene3D::SetPos(D3DXVECTOR3 pos)
 //=============================================================================
 void CScene3D::SetPosision(D3DXVECTOR3 pos)
 {
-	m_pos = pos;
+	// 座標設定
+	SetPos(pos);
+
+	D3DXVECTOR3 size = GetSize();
 
 	// 頂点情報を設定
 	VERTEX_2D *pVtx;
 
 	// 頂点バッファをロックし、頂点情報へのポインタを取得
-	m_pVtxBuff->Lock(0, 0, (void**)&pVtx, 0);
+	GetVtxBuff()->Lock(0, 0, (void**)&pVtx, 0);
 
 	//頂点座標設定の設定
-	pVtx[0].pos = D3DXVECTOR3(- (m_size.x / 2), + (m_size.y / 2), 0.0f);
-	pVtx[1].pos = D3DXVECTOR3(+ (m_size.x / 2), + (m_size.y / 2), 0.0f);
-	pVtx[2].pos = D3DXVECTOR3(- (m_size.x / 2), - (m_size.y / 2), 0.0f);
-	pVtx[3].pos = D3DXVECTOR3(+ (m_size.x / 2), - (m_size.y / 2), 0.0f);
+	pVtx[0].pos = D3DXVECTOR3(-(size.x / 2), +(size.y / 2), +(size.z / 2));
+	pVtx[1].pos = D3DXVECTOR3(+(size.x / 2), +(size.y / 2), +(size.z / 2));
+	pVtx[2].pos = D3DXVECTOR3(-(size.x / 2), -(size.y / 2), -(size.z / 2));
+	pVtx[3].pos = D3DXVECTOR3(+(size.x / 2), -(size.y / 2), - (size.z / 2));
 
 	// 頂点バッファをアンロックする
-	m_pVtxBuff->Unlock();
+	GetVtxBuff()->Unlock();
 }
 
 //=============================================================================
@@ -187,49 +266,176 @@ void CScene3D::SetPosision(D3DXVECTOR3 pos)
 //=============================================================================
 void CScene3D::SetColor(D3DXCOLOR col)
 {
-	VERTEX_3D*pVtx = NULL;
+	CSceneBase::SetColor(col);
+
+
+	VERTEX_3D*pVtx = nullptr;
 
 	//頂点バッファをロック
-	m_pVtxBuff->Lock(0, 0, (void**)&pVtx, 0);
+	GetVtxBuff()->Lock(0, 0, (void**)&pVtx, 0);
 
 	for (int nCount = 0; nCount < NUM_VERTEX; nCount++)
 	{
 		//頂点カラーの設定（0～255の数値で設定）
-		pVtx[nCount].col = D3DXCOLOR(0.0f, 1.0f, 0.0f, 1.0f);
+		pVtx[nCount].col = D3DXCOLOR(col.r, col.g, col.b, col.a);
 	}
 
 	//頂点バッファのアンロック
-	m_pVtxBuff->Unlock();
+	GetVtxBuff()->Unlock();
+}
+
+//=============================================
+// アニメーション情報取得
+//=============================================
+void CScene3D::InitAnimation(D3DXVECTOR2 TexInfo, int nLoop)
+{
+	// 値の代入
+	m_nPatternAnim = (int)TexInfo.x;
+	m_nCounterAnim = (int)TexInfo.y;
+	m_nLoop = nLoop;
+
+	// 頂点情報を設定
+	VERTEX_3D *pVtx;
+
+	// 頂点バッファをロックし、頂点情報へのポインタを取得
+	GetVtxBuff()->Lock(0, 0, (void**)&pVtx, 0);
+
+	//テクスチャ座標を更新
+	pVtx[0].tex = D3DXVECTOR2((float)(1.0f / m_nPatternAnim)*(float)m_nCountAnimPattern, 0.0f);
+	pVtx[1].tex = D3DXVECTOR2((float)(1.0f / m_nPatternAnim)*(float)m_nCountAnimPattern + (float)(1.0f / m_nPatternAnim), 0.0f);
+	pVtx[2].tex = D3DXVECTOR2((float)(1.0f / m_nPatternAnim)*(float)m_nCountAnimPattern, 1.0f);
+	pVtx[3].tex = D3DXVECTOR2((float)(1.0f / m_nPatternAnim)*(float)m_nCountAnimPattern + (float)(1.0f / m_nPatternAnim), 1.0f);
+
+	// 頂点バッファをアンロックする
+	GetVtxBuff()->Unlock();
+}
+
+//=============================================
+// アニメーション更新関数
+//=============================================
+void CScene3D::UpdateAnimation(void)
+{
+	// 爆発のアニメーションカウントを進めて、パターンを切り替える
+	m_nCountAnim++;
+
+	// 頂点情報(テクスチャ座標)の更新
+	if (m_nCountAnim >= m_nCounterAnim)	// 爆発の速さ
+	{
+		// アニメーションのカウントを0にする
+		m_nCountAnim = 0;
+
+		// アニメーションのパターンをカウントさせる
+		m_nCountAnimPattern++;
+	}
+
+	// アニメーションが終わったら
+	if (m_nCountAnimPattern >= m_nPatternAnim)
+	{
+		// 数値を戻しておく
+		m_nCountAnimPattern = 0;
+
+		if (m_nLoop == 0)
+		{
+			// 終了処理
+			Uninit();
+		}
+	}
+	else
+	{
+		// 頂点情報を設定
+		VERTEX_3D *pVtx;
+
+		// 頂点バッファをロックし、頂点情報へのポインタを取得
+		GetVtxBuff()->Lock(0, 0, (void**)&pVtx, 0);
+
+		//テクスチャ座標を更新
+		pVtx[0].tex = D3DXVECTOR2((float)(1.0f / m_nPatternAnim)*(float)m_nCountAnimPattern, 0.0f);
+		pVtx[1].tex = D3DXVECTOR2((float)(1.0f / m_nPatternAnim)*(float)m_nCountAnimPattern + (float)(1.0f / m_nPatternAnim), 0.0f);
+		pVtx[2].tex = D3DXVECTOR2((float)(1.0f / m_nPatternAnim)*(float)m_nCountAnimPattern, 1.0f);
+		pVtx[3].tex = D3DXVECTOR2((float)(1.0f / m_nPatternAnim)*(float)m_nCountAnimPattern + (float)(1.0f / m_nPatternAnim), 1.0f);
+
+		// 頂点バッファをアンロックする
+		GetVtxBuff()->Unlock();
+	}
+}
+
+//======================================================
+// 拡大関数
+//======================================================
+void CScene3D::ScaleUp(float fScaleUp)
+{
+	D3DXVECTOR3 size = GetSize();
+
+	m_fScaleNum += fScaleUp;
+
+	VERTEX_3D*pVtx;	//頂点情報へのポインタ
+
+	//頂点データ範囲をロックし、頂点バッファへのポインタを所得
+	GetVtxBuff()->Lock(0, 0, (void**)&pVtx, 0);
+
+	// 頂点座標の設定
+	pVtx[0].pos = D3DXVECTOR3(-(size.x * m_fScaleNum), +(size.y * m_fScaleNum), +(size.z * m_fScaleNum));
+	pVtx[1].pos = D3DXVECTOR3(+(size.x * m_fScaleNum), +(size.y * m_fScaleNum), +(size.z * m_fScaleNum));
+	pVtx[2].pos = D3DXVECTOR3(-(size.x * m_fScaleNum), -(size.y * m_fScaleNum), -(size.z * m_fScaleNum));
+	pVtx[3].pos = D3DXVECTOR3(+(size.x * m_fScaleNum), -(size.y * m_fScaleNum), -(size.z * m_fScaleNum));
+
+	//頂点データをアンロック
+	GetVtxBuff()->Unlock();
 }
 
 //=============================================================================
-// 色の設定
+// 透明度の減算
 //=============================================================================
-void CScene3D::SetRot(D3DXVECTOR3 rot)
+void CScene3D::SubAlpha(float fAlphaNum)
 {
-	m_rot = rot;
+	// 色の情報
+	D3DXCOLOR col = GetColor();
+
+	m_fAlphaNum = fAlphaNum;
+
+	VERTEX_3D*pVtx;	//頂点情報へのポインタ
+
+	//頂点データ範囲をロックし、頂点バッファへのポインタを所得
+	GetVtxBuff()->Lock(0, 0, (void**)&pVtx, 0);
+
+	for (int nCount = 0; nCount < NUM_VERTEX; nCount++)
+	{
+		//頂点カラーの設定（0～255の数値で設定）
+		pVtx[nCount].col = D3DXCOLOR(col.r, col.g, col.b, col.a - m_fAlphaNum);
+	}
+
+	//頂点データをアンロック
+	GetVtxBuff()->Unlock();
 }
 
 //=============================================================================
-// テクスチャの設定
+// 透明
 //=============================================================================
-void CScene3D::BindTexture(LPDIRECT3DTEXTURE9 pTexture)
+void CScene3D::SetAlpha(bool bAlpha)
 {
-	m_pTexture = pTexture;
+	m_bAlpha = bAlpha;
 }
 
 //=============================================================================
-// バッファ情報
+// アルファテストの値
 //=============================================================================
-LPDIRECT3DVERTEXBUFFER9 CScene3D::GetVtxBuff(void)
+void CScene3D::SetAlphaNum(int nAlphaNum)
 {
-	return m_pVtxBuff;
+	m_nAlphaTestNum = nAlphaNum;
 }
 
 //=============================================================================
-// 座標情報
+// 加算合成の設定
 //=============================================================================
-D3DXVECTOR3 CScene3D::GetPos(void)
+void CScene3D::SetBlend(bool bBlend)
 {
-	return m_pos;
+	m_bBlend = bBlend;
+}
+
+//=============================================================================
+// 逆行列の設定
+//=============================================================================
+void CScene3D::SetInverse(bool bInverse)
+{
+	m_bInverse = bInverse;
 }

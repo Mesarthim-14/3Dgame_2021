@@ -11,45 +11,32 @@
 // インクルードファイル
 //=============================================================================
 #include "main.h"
+#include "mesh_3d.h"
 
 //=============================================================================
 // マクロ定義
 //=============================================================================
 #define FIELD_WIDTH					(4)				// 分割数
 #define FIELD_HEIGHT				(4)				// 分割数
-#define FIELD_WIDTH_SIZE			(7000.0f)		// サイズ
-#define FIELD_HEIGHT_SIZE			(7000.0f)		// サイズ
-#define MAX_MESHFIELD_TEXTURE		(1)				// テクスチャの数
+#define FIELD_WIDTH_SIZE			(16000.0f)		// サイズ
+#define FIELD_HEIGHT_SIZE			(16000.0f)		// サイズ
 
 //=============================================================================
 // メッシュフィールドクラス
 //=============================================================================
-class CMeshField
+class CMeshField : public CMesh3d
 {
 public:
-	CMeshField();			// コンストラクタ
+	CMeshField(PRIORITY = PRIORITY_0);			// コンストラクタ
 	~CMeshField();			// デストラクタ
 
-	HRESULT Init(void);					// 初期化処理
-	void Uninit(void);					// 終了処理
-	void Update(void);					// 更新処理
-	void Draw(void);					// 描画処理
+	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);	// 初期化処理
+	void Uninit(void);									// 終了処理
+	void Update(void);									// 更新処理
+	void Draw(void);									// 描画処理
 
 	static CMeshField*Create(void);		// メッシュフィールド
-	static HRESULT Load(void);			// テクスチャロード
-	static void UnLoad(void);			// テクスチャアンロード
 private:
-	static LPDIRECT3DTEXTURE9 m_apTexture[MAX_MESHFIELD_TEXTURE];	// テクスチャ情報のポインタ
-	LPDIRECT3DVERTEXBUFFER9 m_pVtxBuff = NULL;						// 頂点バッファへのポインタ
-	LPDIRECT3DINDEXBUFFER9 m_pIdxBuff = NULL;							
-	D3DXVECTOR3 m_pos;												// 位置
-	D3DXVECTOR3 m_rot;												// 向き（回転）
-	D3DXMATRIX m_mtxWorld;											// ワールドマトリックス
-	int m_nNumVertex;												// 総頂点数
-	int m_nNumIndex;												// 総インデックス数
-	int m_nNumPolygon;												// 総ポリゴン数
-	float m_fOne_SizeW;
-	float m_fOne_SizeH;
 };
 
 #endif

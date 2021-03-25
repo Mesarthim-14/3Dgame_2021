@@ -1,11 +1,11 @@
+#ifndef _MANAGER_H_
+#define _MANAGER_H_
 //=============================================================================
 //
 // マネージャー処理 [manager.h]
-// Author : 
+// Author : Konishi Yuuto
 //
 //=============================================================================
-#ifndef _MANAGER_H_
-#define _MANAGER_H_
 
 //=============================================================================
 //インクルードファイル
@@ -17,15 +17,15 @@
 //=============================================================================
 class CRenderer;
 class CInputKeyboard;
-class CConection;
 class CFade;
 class CTitle;
 class CTutorial;
 class CGame;
 class CResult;
 class CInputJoypad;
-class CSound;
 class CScene;
+class CTitleBg;
+class CResourceManager;
 
 //=============================================================================
 //マネージャークラス
@@ -39,10 +39,10 @@ public:
 	typedef enum
 	{
 		MODE_TYPE_NONE = 0, 
-		MODE_TYPE_TITLE,	//タイトルモード
-		MODE_TYPE_TUTORIAL,		//チュートリアル
-		MODE_TYPE_GAME,		//ゲームモード
-		MODE_TYPE_RESULT,	//リザルトモード
+		MODE_TYPE_TITLE,		// タイトルモード
+		MODE_TYPE_TUTORIAL,		// チュートリアル
+		MODE_TYPE_GAME,			// ゲームモード
+		MODE_TYPE_RESULT,		// リザルトモード
 		MODE_TYPE_MAX,
 	}MODE_TYPE;
 
@@ -52,45 +52,42 @@ public:
 	CManager();
 	~CManager();
 
-	HRESULT Init(HINSTANCE hInstance, HWND hWnd, bool bWindow);
-	void Uninit(void);
-	void Update(void);
-	void Draw(void);
-	void LoadAll(void);
-	void UnLoadAll(void);
+	HRESULT Init(HINSTANCE hInstance, HWND hWnd, bool bWindow);		// 初期化処理
+	void Uninit(void);												// 終了処理
+	void Update(void);												// 更新処理
+	void Draw(void);												// 描画処理
+	void LoadAll(void);												// 全てのロード処理
+	void UnLoadAll(void);											// 全てのアンロード
 
-	static void SetMode(MODE_TYPE mode);
-	static MODE_TYPE GetMode(void);
+	// Set関数
+	static void SetMode(MODE_TYPE mode);							// モードの設定
 
-	static CRenderer *GetRenderer(void);
-	static CInputKeyboard *GetKeyboard(void);
-	static CConection *GetConection(void);
-	static CFade *GetFade(void);
-	static CInputJoypad *GetJoypad(void);
-	static CSound *GetSound(void);
-	static CScene *GetScene(void) { return m_pScene; }
-
-	static HRESULT InitImgui(HWND hWnd);	//Imgui生成処理
-
-	static void UninitImgui();				//Imgui終了
-	static void ShowDebugInfo();			//デバッグ情報表示
+	// Get関数
+	static MODE_TYPE GetMode(void);														// モードの情報
+	static CRenderer *GetRenderer(void);												// レンダラー情報
+	static CInputKeyboard *GetKeyboard(void);											// キーボード情報
+	static CFade *GetFade(void);														// フェード情報
+	static CInputJoypad *GetJoypad(void);												// ジョイパッドコントローラの情報
+	static CScene *GetScene(void) { return m_pScene; }									// シーン情報
+	static CTitleBg *GetTitleBg(void) { return m_pTitleBg; }							// タイトル背景情報
+	static CResourceManager *GetResourceManager (void) { return m_pResourceManager; }	// リソースマネージャのポインタ
+	static HRESULT InitImgui(HWND hWnd);												// Imgui生成処理
+	static void UninitImgui();															// Imgui終了
+	static void ShowDebugInfo();														// デバッグ情報表示
 
 private:
-	//=========================================================================
-	//メンバ変数宣言
-	//=========================================================================
-	static MODE_TYPE m_mode;
-	static CRenderer *m_pRenderer;	//レンダラークラスのポインタ
-	static CInputKeyboard *m_pInput;
-	static CConection *m_pConection;
-	static CFade *m_pFade;
-	static CTitle *m_pTitle;
-	static CTutorial *m_pTutorial;
-	static CGame *m_pGame;
-	static CResult *m_pResult;
-	static CInputJoypad *m_pJoypad;
-	static CSound *m_pSound;
-	static CScene *m_pScene;
+	static MODE_TYPE m_mode;						// モード
+	static CRenderer *m_pRenderer;					// レンダラークラスのポインタ
+	static CInputKeyboard *m_pInput;				// インプットクラスのポインタ
+	static CFade *m_pFade;							// フェードクラスのポインタ
+	static CTitle *m_pTitle;						// タイトルクラスのポインタ
+	static CTutorial *m_pTutorial;					// チュートリアルのポインタ
+	static CGame *m_pGame;							// ゲームのポインタ
+	static CResult *m_pResult;						// リザルトのポインタ
+	static CInputJoypad *m_pJoypad;					// ジョイパッドコントローrのポインタ
+	static CScene *m_pScene;						// シーンのポインタ
+	static CTitleBg *m_pTitleBg;					// タイトル背景のポインタ
+	static CResourceManager *m_pResourceManager;	// リソースマネージャのポインタ
 };
 
 #endif

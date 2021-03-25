@@ -21,12 +21,8 @@
 
 #define GUARD_EFFECT_SIZE (D3DXVECTOR3(GUARD_EFFECT_SIZE_X, GUARD_EFFECT_SIZE_Y, GUARD_EFFECT_SIZE_Z))
 
-#define GUARD_EFFECT_RADIAN			(25.0f)		// 奥行のサイズ
-#define GUARD_EFFECT_RADIAN_INTER	(2.0f)		// 奥行のサイズ
-#define GUARD_EFFECT_LIFE			(2)			// ライフ
-
 //=========================================================================
-// 3Dポリゴンクラス
+// ガードエフェクトクラス
 //=========================================================================
 class CGuardEffect :public CModel
 {
@@ -40,6 +36,11 @@ public:
 	void Uninit(void);									// 終了処理
 	void Update(void);									// 更新処理
 	void Draw(void);									// 描画処理
+	void Luminous(void);								// 発光の処理
+
 private:
+	float m_fSubNum;									// 減算の値
+	bool m_bLuminous;									// 発光しているフラグ
+	D3DXCOLOR m_Emissive;								// 発光の値
 };
 #endif

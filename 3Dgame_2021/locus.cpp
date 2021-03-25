@@ -14,9 +14,10 @@
 #include "texture.h"
 
 //=============================================================================
-// static初期化
+// マクロ定義
 //=============================================================================
-LPDIRECT3DTEXTURE9 CLocus::m_pTexture = NULL;
+#define LOCUS_ALPHA_NUM	(0.08f)									// 透明度の値
+#define LOCUS_COLOR		(D3DXCOLOR(0.7f, 0.7f, 0.7f, 1.0f))		// 色の設定
 
 //=============================================================================
 // コンストラクタ
@@ -24,11 +25,14 @@ LPDIRECT3DTEXTURE9 CLocus::m_pTexture = NULL;
 CLocus::CLocus()
 {
 	m_nLife = 0;
-	m_pVtxBuff = NULL;
+	m_pVtxBuff = nullptr;
 	m_pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
 	m_posOld = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
 	m_rot = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
 	m_size = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+	m_pTexture = nullptr;
+	m_fAlphaNum = 0.0f;
+	m_color = LOCUS_COLOR;
 }
 
 //=============================================================================
@@ -43,25 +47,26 @@ CLocus::~CLocus()
 // クリエイト
 //=============================================================================
 CLocus * CLocus::Create(D3DXVECTOR3 Origin, D3DXVECTOR3 Top, D3DXVECTOR3 OldOrigin, D3DXVECTOR3 OldTop,
-	D3DXVECTOR3 rot, D3DXVECTOR3 size, int nLife)
+	D3DXVECTOR3 rot, D3DXVECTOR3 size, int nLife, LPDIRECT3DTEXTURE9 pTex)
 {
 	//ポインタ変数
-	CLocus *pLocus = NULL;
+	CLocus *pLocus = nullptr;
 
 	//メモリの確保
 	pLocus = new CLocus;
 
-	//メモリが確保できていたら
-	if (pLocus != NULL)
+	// nullchack
+	if (pLocus != nullptr)
 	{
 		//初期化処理呼び出し
-		pLocus->Init(Origin, Top, OldOrigin, OldTop);
-		pLocus->m_rot = rot;
-		pLocus->m_nLife = nLife;
+		pLocus->Init(Origin, Top, OldOrigin, OldTop);	// 4頂点の座標
+		pLocus->m_rot = rot;							// 角度
+		pLocus->m_nLife = nLife;						// ライフ
+		pLocus->m_pTexture = pTex;						// テクスチャ
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return pLocus;
@@ -89,9 +94,9 @@ HRESULT CLocus::Init(D3DXVECTOR3 Origin, D3DXVECTOR3 Top, D3DXVECTOR3 OldOrigin,
 		FVF_VERTEX_3D,
 		D3DPOOL_MANAGED,
 		&m_pVtxBuff,
-		NULL);
+		nullptr);
 
-	VERTEX_3D*pVtx = NULL;
+	VERTEX_3D*pVtx = nullptr;
 
 	//頂点バッファをロック
 	m_pVtxBuff->Lock(0, 0, (void**)&pVtx, 0);
@@ -109,10 +114,10 @@ HRESULT CLocus::Init(D3DXVECTOR3 Origin, D3DXVECTOR3 Top, D3DXVECTOR3 OldOrigin,
 	pVtx[3].nor = D3DXVECTOR3(0.0f, -1.0f, 0.0f);
 
 	//頂点カラーの設定（0～255の数値で設定）
-	pVtx[0].col = D3DCOLOR_RGBA(255, 255, 255, 255);
-	pVtx[1].col = D3DCOLOR_RGBA(255, 255, 255, 255);
-	pVtx[2].col = D3DCOLOR_RGBA(255, 255, 255, 255);
-	pVtx[3].col = D3DCOLOR_RGBA(255, 255, 255, 255);
+	pVtx[0].col = D3DCOLOR_RGBA(255, 255, 255, 200);
+	pVtx[1].col = D3DCOLOR_RGBA(255, 255, 255, 200);
+	pVtx[2].col = D3DCOLOR_RGBA(255, 255, 255, 200);
+	pVtx[3].col = D3DCOLOR_RGBA(255, 255, 255, 200);
 
 	//各頂点の法線の設定（※ベクトルの大きさは１にする必要がある）
 	pVtx[0].tex = D3DXVECTOR2(0.0f, 0.0f);
@@ -132,10 +137,10 @@ HRESULT CLocus::Init(D3DXVECTOR3 Origin, D3DXVECTOR3 Top, D3DXVECTOR3 OldOrigin,
 void CLocus::Uninit(void)
 {
 	//頂点バッファの破棄
-	if (m_pVtxBuff != NULL)
+	if (m_pVtxBuff != nullptr)
 	{
 		m_pVtxBuff->Release();
-		m_pVtxBuff = NULL;
+		m_pVtxBuff = nullptr;
 	}
 
 	//オブジェクト破棄
@@ -147,8 +152,13 @@ void CLocus::Uninit(void)
 //=============================================================================
 void CLocus::Update(void)
 {
+	// 透明度加算
+	m_fAlphaNum += LOCUS_ALPHA_NUM;
+
+	// 寿命を減らす
 	m_nLife--;
 
+	// ライフが無くなったら
 	if (m_nLife <= 0)
 	{
 		// 終了処理
@@ -162,7 +172,7 @@ void CLocus::Update(void)
 void CLocus::Draw(void)
 {
 	// レンダラーの情報を受け取る
-	CRenderer *pRenderer = NULL;
+	CRenderer *pRenderer = nullptr;
 	pRenderer = CManager::GetRenderer();
 	LPDIRECT3DDEVICE9 pDevice = pRenderer->GetDevice();
 
@@ -177,10 +187,11 @@ void CLocus::Draw(void)
 	// アルファテスト基準値の設定
 	pDevice->SetRenderState(D3DRS_ALPHAREF, 100);
 
+	// 色の設定
 	D3DMATERIAL9 material, OldMaterial;
 	ZeroMemory(&material, sizeof(D3DMATERIAL9));
-	material.Ambient = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
-	material.Diffuse = D3DXCOLOR(0.7f, 0.7f, 0.7f, 1.0f);
+	material.Ambient = D3DXCOLOR(1.0f - m_fAlphaNum, 1.0f - m_fAlphaNum, 1.0f - m_fAlphaNum, 1.0f - m_fAlphaNum);
+	material.Diffuse = D3DXCOLOR(m_color.r - m_fAlphaNum, m_color.g - m_fAlphaNum, m_color.b - m_fAlphaNum, m_color.a - m_fAlphaNum);
 	pDevice->GetMaterial(&OldMaterial);
 	pDevice->SetMaterial(&material);
 	pDevice->SetRenderState(D3DRS_AMBIENT, 0x44444444);
@@ -192,11 +203,14 @@ void CLocus::Draw(void)
 	//頂点バッファをデバイスのデータストリームに設定
 	pDevice->SetStreamSource(0, m_pVtxBuff, 0, sizeof(VERTEX_3D));
 
+	// ワールドマトリクス
 	D3DXMATRIX EffectMtx;
 
+	// 初期化
 	D3DXMatrixIdentity(&EffectMtx);
 
-	pDevice->SetTexture(0, CTexture::GetTexture(CTexture::TEXTURE_NUM_SWORD_LOCUS));
+	// テクスチャの設定
+	pDevice->SetTexture(0, m_pTexture);
 
 	// 頂点フォーマットの設定
 	pDevice->SetFVF(FVF_VERTEX_3D);
@@ -209,9 +223,12 @@ void CLocus::Draw(void)
 
 	pDevice->SetRenderState(D3DRS_AMBIENT, ambient);
 
-	pDevice->SetMaterial(&OldMaterial);					// マテリアルを元に戻す
+	// マテリアルを元に戻す
+	pDevice->SetMaterial(&OldMaterial);	
 
+	// アルファテストの値を戻す
 	pDevice->SetRenderState(D3DRS_ALPHAREF, 0);
-
-	pDevice->SetTexture(0, NULL);
+	
+	// テクスチャ情報を戻す
+	pDevice->SetTexture(0, nullptr);
 }

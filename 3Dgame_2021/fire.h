@@ -29,33 +29,32 @@
 class CBillboard;
 
 //=============================================================================
-// BGクラス
+// 炎クラス
 //=============================================================================
 class CFire : public CBillboard
 {
 public:
-
 	CFire();			// コンストラクタ
 	~CFire();			// デストラクタ
 
 	HRESULT Init(D3DXVECTOR3 pos, D3DXVECTOR3 size);	// 初期化処理
-	void Uninit(void);												// 終了処理
-	void Update(void);												// 更新処理
-	void Draw(void);												// 描画処理
+	void Uninit(void);									// 終了処理
+	void Update(void);									// 更新処理
+	void Draw(void);									// 描画処理
 
-	static CFire * Create(										// ポリゴン生成
+	static CFire * Create(								// ポリゴン生成
 		D3DXVECTOR3 pos, D3DXVECTOR3 size,
 		int nLife);
 
-	void SetColor(D3DXCOLOR col);									// パーティクルのカラーを設定
-	void SetLife(int nLife);										// ライフの設定
-	void ScaleDown(void);											// 縮小
+	void SetColor(const D3DXCOLOR col);						// パーティクルのカラーを設定
+	void SetLife(int nLife);							// ライフの設定
+	void ScaleDown(void);								// 縮小
 private:
-	int m_nLife;													// 体力
-	float m_fScale;													// 拡縮用
-	float m_fScaleNum;												// 拡縮の値
-	float m_fAlpha;													// 透明用
-	float m_fAlphaNum;												// 透明の値
+	int m_nLife;				// 体力
+	float m_fScale;				// 拡縮用
+	float m_fScaleNum;			// 拡縮の値
+	float m_fAlpha;				// 透明用
+	float m_fAlphaNum;			// 透明の値
 };
 
 #endif

@@ -1,12 +1,18 @@
 //=============================================================================
 //
-// 階層構造用のモデル処理 [modelanime.cpp]
-// Author : 山田陵太
+// 階層構造用のモデルクラス処理 [modelanime.cpp]
+// Author : Konishi Yuuto
 //
+//=============================================================================
+
+//=============================================================================
+// インクルード
 //=============================================================================
 #include "modelanime.h"
 #include "manager.h"
 #include "renderer.h"
+#include "resource_manager.h"
+#include "xfile.h"
 
 //=============================================================================
 //階層モデルクラスのコンストラクタ
@@ -15,11 +21,13 @@ CModelAnime::CModelAnime()
 {
 	//各メンバ変数のクリア
 	memset(&m_model, 0, sizeof(m_model));
-	m_pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_rot = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_posAnime = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_rotAnime = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	m_pParent = NULL;
+	m_pos = ZeroVector3;
+	m_rot = ZeroVector3;
+	m_posAnime = ZeroVector3;
+	m_rotAnime = ZeroVector3;
+	m_pParent = nullptr;
+	ZeroMemory(m_OldMtxWorld, sizeof(m_OldMtxWorld));
+	ZeroMemory(m_mtxWorld, sizeof(m_mtxWorld));
 }
 
 //=============================================================================
@@ -32,24 +40,24 @@ CModelAnime::~CModelAnime()
 //=============================================================================
 //階層モデルクラスのクリエイト処理
 //=============================================================================
-CModelAnime * CModelAnime::Create(char *xfilename, D3DXVECTOR3 pos, D3DXVECTOR3 rot)
+CModelAnime * CModelAnime::Create(D3DXVECTOR3 pos, D3DXVECTOR3 rot)
 {
 	//階層モデルクラスのポインタ変数
-	CModelAnime *pModelAnime = NULL;
+	CModelAnime *pModelAnime = nullptr;
 
 	//インスタンス生成
 	pModelAnime = new CModelAnime;
 
-	//メモリが確保できていたら
-	if (pModelAnime != NULL)
+	// !nullcheck
+	if (pModelAnime != nullptr)
 	{
 		//初期化処理呼び出し
-		pModelAnime->Init(xfilename, pos, rot);
+		pModelAnime->Init(pos, rot);
 	}
 	//失敗していた場合
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return pModelAnime;
@@ -58,21 +66,8 @@ CModelAnime * CModelAnime::Create(char *xfilename, D3DXVECTOR3 pos, D3DXVECTOR3 
 //=============================================================================
 //階層モデルクラスの初期化処理
 //=============================================================================
-HRESULT CModelAnime::Init(char *xfilename, D3DXVECTOR3 pos, D3DXVECTOR3 rot)
+HRESULT CModelAnime::Init(D3DXVECTOR3 pos, D3DXVECTOR3 rot)
 {
-	//デバイス情報の取得
-	LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
-
-	//モデルの読み込み
-	D3DXLoadMeshFromX(xfilename,
-		D3DXMESH_SYSTEMMEM,
-		pDevice,
-		NULL,
-		&m_model.pBuffMat,
-		NULL,
-		&m_model.dwNumMat,
-		&m_model.pMesh);
-
 	//位置の設定
 	m_pos = pos;
 
@@ -80,33 +75,6 @@ HRESULT CModelAnime::Init(char *xfilename, D3DXVECTOR3 pos, D3DXVECTOR3 rot)
 	m_rot = rot;
 
 	return S_OK;
-}
-
-//=============================================================================
-//階層モデルクラスの終了処理
-//=============================================================================
-void CModelAnime::Uninit(void)
-{
-	//マテリアル情報の破棄
-	if (m_model.pBuffMat != NULL)
-	{
-		m_model.pBuffMat->Release();
-		m_model.pBuffMat = NULL;
-	}
-
-	//メッシュ情報の破棄
-	if (m_model.pMesh != NULL)
-	{
-		m_model.pMesh->Release();
-		m_model.pMesh = NULL;
-	}
-}
-
-//=============================================================================
-//階層モデルクラスの更新処理
-//=============================================================================
-void CModelAnime::Update(void)
-{
 }
 
 //=============================================================================
@@ -149,7 +117,7 @@ void CModelAnime::Draw(void)
 	D3DXMatrixMultiply(&m_mtxWorld, &m_mtxWorld, &mtxTrans);
 
 	//親が存在する場合
-	if (m_pParent != NULL)
+	if (m_pParent != nullptr)
 	{
 		//親情報を設定
 		mtxParent = m_pParent->GetMtxWorld();
@@ -178,9 +146,19 @@ void CModelAnime::Draw(void)
 		//マテリアルのアンビエントにディフューズカラーを設定
 		pMat[nCntMat].MatD3D.Ambient = pMat[nCntMat].MatD3D.Diffuse;
 
-		//pMat[nCntMat].MatD3D.Emissive = D3DXCOLOR(0.2f, 0.2f, 0.2f, 1.0f);
 		//マテリアルの設定
 		pDevice->SetMaterial(&pMat[nCntMat].MatD3D);
+
+		if (m_model.apTexture[nCntMat] != nullptr)
+		{
+			// テクスチャの設定
+			pDevice->SetTexture(0, m_model.apTexture[nCntMat]);
+		}
+		else
+		{
+			// テクスチャ設定
+			pDevice->SetTexture(0, nullptr);
+		}
 
 		//モデルパーツの描画
 		m_model.pMesh->DrawSubset(nCntMat);
@@ -207,6 +185,14 @@ void CModelAnime::SetParent(CModelAnime * pParent)
 void CModelAnime::SetPosAnime(const D3DXVECTOR3 posAnime)
 {
 	m_posAnime = posAnime;
+}
+
+//=============================================================================
+//モデル情報を取得
+//=============================================================================
+void CModelAnime::SetModel(CXfile::MODEL model)
+{
+	m_model = model;
 }
 
 //=============================================================================
@@ -262,5 +248,5 @@ D3DXMATRIX CModelAnime::GetMtxWorld(void)
 //=============================================================================
 D3DXMATRIX CModelAnime::GetOldMtxWorld(void)
 {
-	return m_OldMtxWorld1[1];
+	return m_OldMtxWorld;
 }

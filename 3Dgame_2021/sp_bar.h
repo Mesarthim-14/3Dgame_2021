@@ -22,7 +22,7 @@
 #define PLAYER_SP_BAR_SIZE		(D3DXVECTOR3(PLAYER_SP_BAR_SIZE_X, PLAYER_LIFE_FLAME_SIZE_Y, 0.0f))						// 体力バーの大きさ
 
 //=========================================================
-// ヒットポイントバークラス
+// SPバークラス
 //=========================================================
 class CSpBar : public CGage
 {
@@ -37,6 +37,7 @@ public:
 
 	static CSpBar *Create(D3DXVECTOR3 pos, D3DXVECTOR3 size, int nSp);		// ポリゴン生成
 	void SpRegene(void);													// SPのリジェネ処理
+
 private:
 	int m_nRegeneCnt;		// リジェネのフレームカウント
 };

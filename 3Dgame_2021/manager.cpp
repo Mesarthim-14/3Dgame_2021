@@ -6,7 +6,7 @@
 //=============================================================================
 
 //=============================================================================
-//インクルードファイル
+// インクルード
 //=============================================================================
 #include "bg.h"
 #include "billboard.h"
@@ -17,16 +17,19 @@
 #include "joypad.h"
 #include "keyboard.h"
 #include "manager.h"
-#include "meshfield.h"
+#include "mesh_3d.h"
 #include "model.h"
-#include "particle_factory.h"
+#include "effect_factory.h"
 #include "player.h"
 #include "renderer.h"
+#include "resource_manager.h"
 #include "result.h"
 #include "scene3D.h"
 #include "sound.h"
+#include "stone_effect.h"
 #include "texture.h"
 #include "title.h"
+#include "title_bg.h"
 #include "tutorial.h"
 #include "xfile.h"
 
@@ -34,17 +37,17 @@
 //静的メンバ変数宣言
 //=============================================================================
 CManager::MODE_TYPE CManager::m_mode = CManager::MODE_TYPE_TITLE;
-CRenderer *CManager::m_pRenderer = NULL;	//レンダラークラスのポインタ変数
-CInputKeyboard *CManager::m_pInput = NULL;//入力処理クラスのポインタ変数
-CConection *CManager::m_pConection = NULL;
-CFade *CManager::m_pFade = NULL;
-CTitle *CManager::m_pTitle = NULL;
-CTutorial *CManager::m_pTutorial = NULL;
-CGame *CManager::m_pGame = NULL;
-CResult *CManager::m_pResult = NULL;
-CInputJoypad *CManager::m_pJoypad = NULL;
-CSound *CManager::m_pSound = NULL;			//サウンドクラスのポインタ
-CScene *CManager::m_pScene = NULL;
+CRenderer *CManager::m_pRenderer = nullptr;
+CInputKeyboard *CManager::m_pInput = nullptr;
+CFade *CManager::m_pFade = nullptr;
+CTitle *CManager::m_pTitle = nullptr;
+CTutorial *CManager::m_pTutorial = nullptr;
+CGame *CManager::m_pGame = nullptr;
+CResult *CManager::m_pResult = nullptr;
+CInputJoypad *CManager::m_pJoypad = nullptr;
+CScene *CManager::m_pScene = nullptr;
+CTitleBg *CManager::m_pTitleBg = nullptr;
+CResourceManager *CManager::m_pResourceManager = nullptr;
 
 //=============================================================================
 // コンストラクタ
@@ -69,7 +72,7 @@ HRESULT CManager::Init(HINSTANCE hInstance, HWND hWnd, bool bWindow)
 	m_pRenderer = new CRenderer;
 
 	//メモリが確保できたら
-	if (m_pRenderer != NULL)
+	if (m_pRenderer != nullptr)
 	{
 		// 初期化処理
 		if (FAILED(m_pRenderer->Init(hWnd, bWindow)))
@@ -82,7 +85,7 @@ HRESULT CManager::Init(HINSTANCE hInstance, HWND hWnd, bool bWindow)
 	m_pInput = new CInputKeyboard;
 
 	//メモリが確保できたら
-	if (m_pInput != NULL)
+	if (m_pInput != nullptr)
 	{
 		if (FAILED(m_pInput->Init(hInstance, hWnd)))
 		{
@@ -94,7 +97,7 @@ HRESULT CManager::Init(HINSTANCE hInstance, HWND hWnd, bool bWindow)
 	m_pJoypad = new CInputJoypad;
 
 	//メモリが確保できたら
-	if (m_pJoypad != NULL)
+	if (m_pJoypad != nullptr)
 	{
 		if (FAILED(m_pJoypad->Init(hInstance, hWnd)))
 		{
@@ -102,17 +105,11 @@ HRESULT CManager::Init(HINSTANCE hInstance, HWND hWnd, bool bWindow)
 		}
 	}
 
-	//サウンドのインスタンス生成
-	m_pSound = new CSound;
-	if (m_pSound != NULL)
+	// nullcheck
+	if (m_pResourceManager == nullptr)
 	{
-		m_pSound->Init(hWnd);
-	}
-
-	//ライブラリ生成
-	if (FAILED(InitImgui(hWnd)))
-	{
-		return E_FAIL;
+		// リソースマネージャのインスタンス生成
+		m_pResourceManager = CResourceManager::GetInstance();
 	}
 
 	//フェードクラスのクリエイト
@@ -131,8 +128,54 @@ void CManager::Uninit(void)
 {
 	//全テクスチャの破棄
 	UnLoadAll();
-	
-	if (m_pFade != NULL)
+
+	//現在モードの終了
+	switch (m_mode)
+	{
+		// タイトル
+	case MODE_TYPE_TITLE:
+		if (m_pTitle != nullptr)
+		{
+			// 終了処理
+			m_pTitle->Uninit();
+			m_pTitle = nullptr;
+		}
+
+		break;
+
+		// チュートリアル
+	case MODE_TYPE_TUTORIAL:
+		if (m_pTutorial != nullptr)
+		{
+			// 終了処理
+			m_pTutorial->Uninit();
+			m_pTutorial = nullptr;
+		}
+		break;
+
+		// ゲーム
+	case MODE_TYPE_GAME:
+		if (m_pGame != nullptr)
+		{
+			// 終了処理
+			m_pGame->Uninit();
+			m_pGame = nullptr;
+		}
+		break;
+
+		// リザルト
+	case MODE_TYPE_RESULT:
+		if (m_pResult != nullptr)
+		{
+			// 終了処理
+			m_pResult->Uninit();
+			m_pResult = nullptr;
+		}
+		break;
+	}
+
+	// nullchack
+	if (m_pFade != nullptr)
 	{
 		//フェードクラスの終了処理呼び出し
 		m_pFade->Uninit();
@@ -141,10 +184,18 @@ void CManager::Uninit(void)
 		delete m_pFade;
 
 		//メモリのクリア
-		m_pFade = NULL;
+		m_pFade = nullptr;
 	}
 
-	if (m_pInput != NULL)
+	// !nullcheck
+	if (m_pResourceManager != nullptr)
+	{
+		// リソースのロード
+		delete m_pResourceManager;
+		m_pResourceManager = nullptr;
+	}
+
+	if (m_pInput != nullptr)
 	{
 		//入力処理クラスの終了処理呼び出し
 		m_pInput->Uninit();
@@ -153,22 +204,22 @@ void CManager::Uninit(void)
 		delete m_pInput;
 
 		//メモリのクリア
-		m_pInput = NULL;
+		m_pInput = nullptr;
 	}
 
-	if (m_pJoypad != NULL)
+	if (m_pJoypad != nullptr)
 	{
 		//入力処理クラスの終了処理呼び出し
 		m_pJoypad->Uninit();
 
 		//メモリの削除
-		delete m_pInput;
+		delete m_pJoypad;
 
 		//メモリのクリア
-		m_pJoypad = NULL;
+		m_pJoypad = nullptr;
 	}
 
-	if (m_pRenderer != NULL)
+	if (m_pRenderer != nullptr)
 	{
 		//レンダラークラスの終了処理呼び出し
 		m_pRenderer->Uninit();
@@ -177,9 +228,10 @@ void CManager::Uninit(void)
 		delete m_pRenderer;
 
 		//メモリのクリア
-		m_pRenderer = NULL;
+		m_pRenderer = nullptr;
 	}
 
+	// シーン情報のリリース
 	CScene::ReleaseAll();
 }
 
@@ -188,25 +240,25 @@ void CManager::Uninit(void)
 //=============================================================================
 void CManager::Update(void)
 {
-	if (m_pInput != NULL)
+	if (m_pInput != nullptr)
 	{
 		//入力処理クラスの更新処理呼び出し
 		m_pInput->Update();
 	}
 
-	if (m_pJoypad != NULL)
+	if (m_pJoypad != nullptr)
 	{
 		//入力処理クラスの更新処理呼び出し
 		m_pJoypad->Update();
 	}
 
-	if (m_pRenderer != NULL)
+	if (m_pRenderer != nullptr)
 	{
 		//レンダラークラスの更新処理呼び出し
 		m_pRenderer->Update();
 	}
 
-	if (m_pFade != NULL)
+	if (m_pFade != nullptr)
 	{
 		//フェードクラスの更新処理呼び出し
 		m_pFade->Update();
@@ -218,7 +270,7 @@ void CManager::Update(void)
 //=============================================================================
 void CManager::Draw(void)
 {
-	if (m_pRenderer != NULL)
+	if (m_pRenderer != nullptr)
 	{
 		//レンダラークラスの描画処理呼び出し
 		m_pRenderer->Draw();
@@ -230,12 +282,20 @@ void CManager::Draw(void)
 //=============================================================================
 void CManager::LoadAll(void)
 {
+	// !nullcheck
+	if (m_pResourceManager != nullptr)
+	{
+		// リソースのロード
+		m_pResourceManager->LoadAll();
+	}
+
 	CResult::Load();
-	CMeshField::Load();
 	CTutorial::Load();
-	CTexture::Load();
-	CXfile::ModelLoad();
-	CParticleFactory::ReadFile();
+	CTitle::Load();
+	CEffectFactory::ReadFile();
+	CStoneEffect::ReadFile();
+	CMesh3d::ReadFile();
+
 }
 
 //=============================================================================
@@ -243,9 +303,15 @@ void CManager::LoadAll(void)
 //=============================================================================
 void CManager::UnLoadAll(void)
 {
-	CMeshField::UnLoad();
-	CTexture::UnLoad();
-	CXfile::ModelUnLoad();
+	// !nullcheck
+	if (m_pResourceManager != nullptr)
+	{
+		// リソースのロード
+		m_pResourceManager->UnLoadAll();
+	}
+
+	CTitle::UnLoad();
+	CResult::UnLoad();
 }
 
 //=============================================================================
@@ -253,48 +319,51 @@ void CManager::UnLoadAll(void)
 //=============================================================================
 void CManager::SetMode(MODE_TYPE mode)
 {
-	CSound *pSound = CManager::GetSound();
+	// サウンドの情報
+	CSound *pSound = CManager::GetResourceManager()->GetSoundClass();
 
 	//現在モードの終了
 	switch (m_mode)
 	{
+		// タイトル
 	case MODE_TYPE_TITLE:
-		if (m_pTitle != NULL)
+		if (m_pTitle != nullptr)
 		{
+			// タイトル処理
 			m_pTitle->Uninit();
-
-			m_pTitle = NULL;
+			m_pTitle = nullptr;
 		}
 		break;
 
+		// チュートリアル
 	case MODE_TYPE_TUTORIAL:
-		if (m_pTutorial != NULL)
+		if (m_pTutorial != nullptr)
 		{
-			m_pTutorial->Uninit();
 			pSound->Stop(CSound::SOUND_LABEL_BGM_TITLE);
-			m_pTutorial = NULL;
+			m_pTutorial = nullptr;
 		}
 		break;
 
+		// ゲーム
 	case MODE_TYPE_GAME:
-		if (m_pGame != NULL)
+		if (m_pGame != nullptr)
 		{
-			m_pGame->Uninit();
 			pSound->Stop(CSound::SOUND_LABEL_BGM_GAME);
-			m_pGame = NULL;
+			m_pGame = nullptr;
 		}
 		break;
 
+		// リザルト
 	case MODE_TYPE_RESULT:
-		if (m_pResult != NULL)
+		if (m_pResult != nullptr)
 		{
-			m_pResult->Uninit();
-			m_pResult = NULL;
+			m_pResult = nullptr;
 		}
 		break;
 
 	}
 
+	// シーン情報のリリース
 	CScene::ReleaseAll();
 
 	//モードを設定
@@ -303,150 +372,45 @@ void CManager::SetMode(MODE_TYPE mode)
 	//設定されたモードをクリエイト
 	switch (m_mode)
 	{
+		// タイトル
 	case MODE_TYPE_TITLE:
-		if (m_pTitle == NULL)
+		if (m_pTitle == nullptr)
 		{
+			// タイトル生成
 			m_pTitle = CTitle::Create();
 		}
-		
 		break;
 
+		// チュートリアル
 	case MODE_TYPE_TUTORIAL:
-		if (m_pTutorial == NULL)
+		if (m_pTutorial == nullptr)
 		{
+			// チュートリアル生成
 			m_pTutorial = CTutorial::Create();
 		}
-
 		break;
 
+		// ゲーム
 	case MODE_TYPE_GAME:
-		if (m_pGame == NULL)
+		if (m_pGame == nullptr)
 		{
+			// ゲーム生成
 			m_pGame = CGame::Create();
 		}
 
 		break;
 
+		// リザルト
 	case MODE_TYPE_RESULT:
-		if (m_pGame == NULL)
+		if (m_pGame == nullptr)
 		{
+			// リザルト生成
 			m_pResult = CResult::Create();
 		}
 
 	default:
 		break;
 	}
-}
-
-//------------------------------------------------------------------------------
-//Imgui初期化
-//------------------------------------------------------------------------------
-HRESULT CManager::InitImgui(HWND hWnd)
-{
-	//ゲームパッドとキーボードの情報取得
-	m_pInput = CManager::GetKeyboard();
-
-	//NULLチェック
-	if (!m_pInput)
-	{
-		return E_FAIL;
-	}
-
-	//create
-	IMGUI_CHECKVERSION();
-
-	//生成
-	ImGui::CreateContext();
-
-	//デフォルトカラー設定
-	ImGui::StyleColorsDark();
-
-	//初期化
-	ImGui_ImplWin32_Init(hWnd);
-	ImGui_ImplDX9_Init(CManager::GetRenderer()->GetDevice());
-
-
-//	ImGui::Begin("config 1");
-//
-//	ImGui::End();
-
-	return S_OK;
-}
-
-//------------------------------------------------------------------------------
-//Imgui終了
-//------------------------------------------------------------------------------
-void CManager::UninitImgui()
-{
-	ImGui_ImplDX9_Shutdown();
-	ImGui_ImplWin32_Shutdown();
-	ImGui::DestroyContext();
-}
-//------------------------------------------------------------------------------
-//Imgui デバッグ情報表示
-//------------------------------------------------------------------------------
-void CManager::ShowDebugInfo()
-{
-#ifdef _DEBUG
-
-
-
-
-	//LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
-
-	////開始
-	//if (ImGui::CollapsingHeader("Debug"))
-	//{
-	//	//FPS情報
-	//	if (ImGui::TreeNode("FPS"))
-	//	{
-	//		//FPS
-	//		ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-	//		ImGui::TreePop();
-	//	}
-
-
-	//	//情報
-	//	if (ImGui::TreeNode("DebugCommand"))
-	//	{
-	//		//ライティング
-	//		if (ImGui::Checkbox("Lighting", &m_Lighting))
-	//		{
-	//			pDevice->SetRenderState(D3DRS_LIGHTING, m_Lighting);		// ライティングモード切り替え
-	//		}
-
-	//		//カリング
-	//		if (ImGui::TreeNode("tree1", "CULLING"))
-	//		{
-	//			if (ImGui::RadioButton("D3DCULL_CCW", &m_Culling, 0))
-	//			{
-	//				//裏面カリング
-	//				CManager::GetRenderer()->SetRendererCommand(CRenderer::RENDERER_CULLING_CCW);
-	//			}
-	//			ImGui::SameLine();
-	//			if (ImGui::RadioButton("D3DCULL_CW", &m_Culling, 1))
-	//			{
-	//				//表面カリング
-	//				CManager::GetRenderer()->SetRendererCommand(CRenderer::RENDERER_CULLING_CW);
-	//			}
-	//			ImGui::SameLine();
-	//			if (ImGui::RadioButton("D3DCULL_NONE", &m_Culling, 2))
-	//			{
-	//				//カリングしない
-	//				CManager::GetRenderer()->SetRendererCommand(CRenderer::RENDERER_CULLING_NONE);
-	//			}
-	//			ImGui::TreePop();
-	//		}
-	//		//プレイヤーデバッグ
-	//		if (ImGui::Checkbox("DebugPlayer", &m_bDebugPlayer))
-	//		{
-
-	//		}
-	//		ImGui::TreePop();
-	//	}
-	//}
-
-#endif //DEBUG
 }
 
 //=============================================================================
@@ -474,11 +438,6 @@ CInputKeyboard * CManager::GetKeyboard(void)
 	return m_pInput;
 }
 
-CConection *CManager::GetConection(void)
-{
-	return m_pConection;
-}
-
 //=============================================================================
 //フェード情報取得
 //=============================================================================
@@ -493,12 +452,4 @@ CFade * CManager::GetFade(void)
 CInputJoypad * CManager::GetJoypad(void)
 {
 	return m_pJoypad;
-}
-
-//=============================================================================
-//ジョイパッド情報取得
-//=============================================================================
-CSound * CManager::GetSound(void)
-{
-	return m_pSound;
 }

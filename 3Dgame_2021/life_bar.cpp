@@ -31,8 +31,8 @@ CLifeBar * CLifeBar::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size, D3DXCOLOR color,
 	pLifeBar->SetGage(nLife);			// 体力の設定
 	pLifeBar->SetMaxGage(nLife);		// ライフの設定
 	pLifeBar->Init(pos, size);			// 初期化
-	pLifeBar->m_Ctype = Ctype;
-	pLifeBar->SetColor(color);
+	pLifeBar->m_Ctype = Ctype;			// バーの種類
+	pLifeBar->SetColor(color);			// 色の設定
 
 	return pLifeBar;
 }
@@ -80,10 +80,12 @@ void CLifeBar::Update(void)
 	// 徐々に減らしていく
 	if (GetSubGage() > 0)
 	{
+		// バーの減算
 		AddSubNum(DECREASE_LIFE_SPEED);
 	}
 	else
 	{
+		// 無くなったら0に戻す
 		SetSubNum(0);
 	}
 

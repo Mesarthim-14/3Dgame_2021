@@ -1,7 +1,7 @@
 //=============================================================================
 //
-// フェード処理 [fade.h]
-// Author : 山田陵太
+// フェード処理 [fade.cpp]
+// Author : konishi Yuuto
 //
 //=============================================================================
 #include "fade.h"
@@ -19,7 +19,7 @@
 //=============================================================================
 CFade::CFade()
 {
-	m_pPolygon = NULL;
+	m_pPolygon = nullptr;
 	m_FadeMode = FADE_MODE_NONE;
 	m_colorFade = D3DXCOLOR(0.0f, 0.0f, 0.0f, 1.0f);
 	m_modeNext = CManager::MODE_TYPE_TITLE;
@@ -38,13 +38,13 @@ CFade::~CFade()
 CFade * CFade::Create(void)
 {
 	//フェードクラスのポインタ変数
-	CFade *pFade = NULL;
+	CFade *pFade = nullptr;
 
 	//メモリを確保
 	pFade = new CFade;
 
 	//メモリが確保できていたら
-	if (pFade != NULL)
+	if (pFade != nullptr)
 	{
 		//初期化処理呼び出し
 		pFade->Init();
@@ -52,7 +52,7 @@ CFade * CFade::Create(void)
 	//メモリ確保に失敗したとき
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 	return pFade;
 }
@@ -66,7 +66,7 @@ HRESULT CFade::Init(void)
 
 	//ポリゴンクラスを生成
 	m_pPolygon = CPolygon::Create(D3DXVECTOR3(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f),
-		D3DXVECTOR3(SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f), CPolygon::TEX_TYPE_NORE);
+		D3DXVECTOR3(SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f));
 
 	//色を設定
 	m_pPolygon->SetColor(m_colorFade);
@@ -79,7 +79,7 @@ HRESULT CFade::Init(void)
 //=============================================================================
 void CFade::Uninit(void)
 {
-	if (m_pPolygon != NULL)
+	if (m_pPolygon != nullptr)
 	{
 		//ポリゴンクラスの終了処理呼び出し
 		m_pPolygon->Uninit();
@@ -88,7 +88,7 @@ void CFade::Uninit(void)
 		delete m_pPolygon;
 
 		//メモリのクリア
-		m_pPolygon = NULL;
+		m_pPolygon = nullptr;
 	}
 }
 
@@ -97,7 +97,7 @@ void CFade::Uninit(void)
 //=============================================================================
 void CFade::Update(void)
 {
-	if (m_pPolygon != NULL)
+	if (m_pPolygon != nullptr)
 	{
 		if (m_FadeMode != FADE_MODE_NONE)
 		{
@@ -142,7 +142,7 @@ void CFade::Update(void)
 //=============================================================================
 void CFade::Draw(void)
 {
-	if (m_pPolygon != NULL)
+	if (m_pPolygon != nullptr)
 	{
 		//ポリゴンクラスの描画処理呼び出し
 		m_pPolygon->Draw();

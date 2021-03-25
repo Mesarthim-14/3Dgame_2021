@@ -11,27 +11,14 @@
 #include "meshfield.h"
 #include "renderer.h"
 #include "manager.h"
-
-//=============================================================================
-// static初期化
-//=============================================================================
-LPDIRECT3DTEXTURE9 CMeshField::m_apTexture[MAX_MESHFIELD_TEXTURE] = {};
+#include "texture.h"
+#include "resource_manager.h"
 
 //=============================================================================
 // コンストラクタ
 //=============================================================================
-CMeshField::CMeshField()
+CMeshField::CMeshField(PRIORITY Priority) : CMesh3d(Priority)
 {
-	m_pVtxBuff = NULL;							// 頂点バッファへのポインタ
-	m_pIdxBuff = NULL;
-	m_pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);		// 位置
-	m_rot = D3DXVECTOR3(0.0f, 0.0f, 0.0f);		// 向き（回転）
-	D3DXMatrixIdentity(&m_mtxWorld);
-	m_nNumVertex = 0;							// 総頂点数
-	m_nNumIndex = 0;							// 総インデックス数
-	m_nNumPolygon = 0;							// 総ポリゴン数
-	m_fOne_SizeW = 0.0f;
-	m_fOne_SizeH = 0.0f;
 }
 
 //=============================================================================
@@ -49,53 +36,20 @@ CMeshField * CMeshField::Create(void)
 	// メモリ確保
 	CMeshField *pMeshField = new CMeshField;
 
-	// 初期化処理
+	// nullchack
 	if (pMeshField != NULL)
 	{
-		pMeshField->Init();
+		// 初期化処理
+		pMeshField->Init(ZeroVector3, ZeroVector3);
 	}
 
 	return pMeshField;
 }
 
 //=============================================================================
-// テクスチャロード
-//=============================================================================
-HRESULT CMeshField::Load(void)
-{
-	// レンダラーの情報を受け取る
-	CRenderer *pRenderer = NULL;
-	pRenderer = CManager::GetRenderer();
-	LPDIRECT3DDEVICE9 pDevice = pRenderer->GetDevice();
-
-	// テクスチャの読み込み
-	D3DXCreateTextureFromFile(pDevice, "data/Texture/stone_00124.jpg",
-		&m_apTexture[0]);
-
-	return S_OK;
-}
-
-//=============================================================================
-// テクスチャアンロード
-//=============================================================================
-void CMeshField::UnLoad(void)
-{
-	for (int nCount = 0; nCount < MAX_MESHFIELD_TEXTURE; nCount++)
-	{
-		// テクスチャの開放
-		if (m_apTexture[nCount] != NULL)
-		{
-			m_apTexture[nCount]->Release();
-
-			m_apTexture[nCount] = NULL;
-		}
-	}
-}
-
-//=============================================================================
 // 初期化処理
 //=============================================================================
-HRESULT CMeshField::Init(void)
+HRESULT CMeshField::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
 	// Rendererクラスからデバイスを取得
 	LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
@@ -103,43 +57,52 @@ HRESULT CMeshField::Init(void)
 	VERTEX_3D *pVtx;
 
 	// ローカル変数
-	int nCount;
-	int nCntIndex;
-	int nCntIndex01 = 0;
-	int nCntH;
-	int nCntV;
+	int nCount = 0;			// for文用
+	int nCntIndex = 0;		// 頂点の生成番号
+	int nCntH = 0;			// 縦の頂点カウンタ
+	int nCntV = 0;			// 横の頂点カウンタ
+
+	// テクスチャの設定
+	CTexture *pTexture = CManager::GetResourceManager()->GetTextureClass();
+	BindTexture(pTexture->GetTexture(CTexture::TEXTURE_NUM_FLOOR));
 
 	// 値の初期化
-	m_nNumVertex = (FIELD_WIDTH + 1) * (FIELD_HEIGHT + 1);
-	m_nNumIndex = (FIELD_WIDTH + 1) * FIELD_HEIGHT * 2 + (FIELD_HEIGHT - 1) * 2;
-	m_nNumPolygon = FIELD_WIDTH * FIELD_HEIGHT * 2 + (FIELD_HEIGHT - 1) * 4;
-	m_fOne_SizeW = FIELD_WIDTH_SIZE * 2 / FIELD_WIDTH;
-	m_fOne_SizeH = FIELD_HEIGHT_SIZE * 2 / FIELD_HEIGHT;
+	SetNumVertex((FIELD_WIDTH + 1) * (FIELD_HEIGHT + 1));								// 25
+	SetNumIndex((FIELD_WIDTH + 1) * FIELD_HEIGHT * 2 + (FIELD_HEIGHT - 1) * 2);			// 5*(4*2)+3*2	46
+	
+	SetNumPolygon(FIELD_WIDTH * FIELD_HEIGHT * 2 + (FIELD_HEIGHT - 1) * 4);				// 4*8+3*4	44
+
+	D3DXVECTOR2 OneSize = D3DXVECTOR2(FIELD_WIDTH_SIZE * 2 / FIELD_WIDTH, FIELD_HEIGHT_SIZE * 2 / FIELD_HEIGHT);
+	SetOneSize(OneSize);
+
+	LPDIRECT3DVERTEXBUFFER9 pVtxBuff;		// バッファ
+	LPDIRECT3DINDEXBUFFER9 pIdxBuff;		// バッファの番号
 
 	// オブジェクトの頂点バッファを生成
-	pDevice->CreateVertexBuffer(sizeof(VERTEX_3D) * m_nNumVertex,
+	pDevice->CreateVertexBuffer(sizeof(VERTEX_3D) * GetNumVertex(),
 		D3DUSAGE_WRITEONLY,
 		FVF_VERTEX_3D,
 		D3DPOOL_MANAGED,
-		&m_pVtxBuff,
+		&pVtxBuff,
 		NULL);
 
-	pDevice->CreateIndexBuffer(sizeof(WORD) * m_nNumIndex,
+	// インデックスバッファ生成
+	pDevice->CreateIndexBuffer(sizeof(WORD) * GetNumIndex(),
 		D3DUSAGE_WRITEONLY,
 		D3DFMT_INDEX16,
 		D3DPOOL_MANAGED,
-		&m_pIdxBuff,
+		&pIdxBuff,
 		NULL);
 
 	// 頂点データの範囲をロックし、頂点バッファへのポインタを取得
-	m_pVtxBuff->Lock(0, 0, (void**)&pVtx, 0);
+	pVtxBuff->Lock(0, 0, (void**)&pVtx, 0);
 
 	for (nCntV = 0; nCntV < FIELD_HEIGHT + 1; nCntV++)
 	{
 		for (nCntH = 0; nCntH < FIELD_WIDTH + 1; nCntH++)
 		{
 			// 頂点の設定
-			pVtx[(nCntV * (FIELD_HEIGHT + 1)) + nCntH].pos = D3DXVECTOR3(-FIELD_WIDTH_SIZE + (nCntH * m_fOne_SizeW), 0.0f, FIELD_HEIGHT_SIZE - (nCntV * m_fOne_SizeH));
+			pVtx[(nCntV * (FIELD_HEIGHT + 1)) + nCntH].pos = D3DXVECTOR3(-FIELD_WIDTH_SIZE + (nCntH * OneSize.x), 0.0f, FIELD_HEIGHT_SIZE - (nCntV * OneSize.y));
 
 			// 法線ベクトルの設定
 			pVtx[(nCntV * (FIELD_HEIGHT + 1)) + nCntH].nor = D3DXVECTOR3(0.0f, 1.0f, 0.0f);
@@ -153,15 +116,20 @@ HRESULT CMeshField::Init(void)
 	}
 
 	// 頂点データをアンロックする
-	m_pVtxBuff->Unlock();
+	pVtxBuff->Unlock();
+
+	// 頂点バッファの設定
+	BindVtxBuff(pVtxBuff);
 
 	// インデックスバッファの設定
 	WORD *pIdx;
 
 	// インデックスバッファをロックし、インデックスデータへのポインタを取得
-	m_pIdxBuff->Lock(0, 0, (void**)&pIdx, 0);
+	pIdxBuff->Lock(0, 0, (void**)&pIdx, 0);
 
-	for (nCount = 0, nCntIndex = 0; nCount < m_nNumIndex; nCount += 2)
+	// インデックス数
+	int nNumIndex = GetNumIndex();
+	for (nCount = 0, nCntIndex = 0; nCount < nNumIndex; nCount += 2)
 	{
 		if (((nCount + 2) % (((FIELD_WIDTH + 1) * 2) + 2)) == 0 && nCount != 0)
 		{
@@ -181,10 +149,12 @@ HRESULT CMeshField::Init(void)
 
 			nCntIndex++;
 		}
-
 	}
+
 	// 頂点データをアンロックする
-	m_pIdxBuff->Unlock();
+	pIdxBuff->Unlock();
+
+	BindIdxBuff(pIdxBuff);
 
 	return S_OK;
 }
@@ -194,19 +164,8 @@ HRESULT CMeshField::Init(void)
 //=============================================================================
 void CMeshField::Uninit(void)
 {
-	// 頂点バッファの開放
-	if (m_pVtxBuff != NULL)
-	{
-		m_pVtxBuff->Release();
-		m_pVtxBuff = NULL;
-	}
-
-	// インデックスバッファの開放
-	if (m_pIdxBuff != NULL)
-	{
-		m_pIdxBuff->Release();
-		m_pIdxBuff = NULL;
-	}
+	// 削除フラグ
+	Release();
 }
 
 //=============================================================================
@@ -221,55 +180,6 @@ void CMeshField::Update(void)
 //=============================================================================
 void CMeshField::Draw(void)
 {
-	// Rendererクラスからデバイスを取得
-	LPDIRECT3DDEVICE9 pDevice = CManager::GetRenderer()->GetDevice();
-	D3DXMATRIX mtxRot, mtxTrans;
-
-	// ワールドマトリックスの初期化
-	D3DXMatrixIdentity(&m_mtxWorld);
-
-	// 回転を反映
-	D3DXMatrixRotationYawPitchRoll(
-		&mtxRot,
-		m_rot.y,
-		m_rot.x,
-		m_rot.z);
-
-	D3DXMatrixMultiply(
-		&m_mtxWorld,
-		&m_mtxWorld,
-		&mtxRot);
-
-	// 位置を反映
-	D3DXMatrixTranslation(
-		&mtxTrans,
-		m_pos.x,
-		m_pos.y,
-		m_pos.z);
-
-	D3DXMatrixMultiply(
-		&m_mtxWorld,
-		&m_mtxWorld,
-		&mtxTrans);
-
-	// ワールドマトリックスの設定
-	pDevice->SetTransform(D3DTS_WORLD, &m_mtxWorld);
-
-	// 頂点バッファをデータストリームにバインド
-	pDevice->SetStreamSource(0, m_pVtxBuff, 0, sizeof(VERTEX_3D));
-
-	// インデックスバッファをデータストリームにバインド
-	pDevice->SetIndices(m_pIdxBuff);
-
-	// 頂点フォーマットの設定
-	pDevice->SetFVF(FVF_VERTEX_3D);
-
-	// 頂点フォーマットの設定
-	pDevice->SetTexture(0, m_apTexture[0]);
-
-	// ポリゴンの描画
-	pDevice->DrawIndexedPrimitive(D3DPT_TRIANGLESTRIP, 0, 0, m_nNumVertex, 0, m_nNumPolygon);
-
-	// 頂点フォーマットの設定
-	pDevice->SetTexture(0, NULL);
+	// 親クラス描画処理
+	CMesh3d::Draw();
 }

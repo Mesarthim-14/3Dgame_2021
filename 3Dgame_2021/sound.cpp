@@ -1,10 +1,15 @@
 //================================================
 //
 // サウンド処理 [sound.h]
-// Author : 佐藤颯紀
+// Author : Konishi Yuuto
 //
 //================================================
+
+//================================================
+// インクルード
+//================================================
 #include "sound.h"
+
 //====================================================
 //静的メンバ変数宣言
 //====================================================
@@ -12,17 +17,11 @@ CSound::PARAM CSound::m_aParam[SOUND_LABEL_MAX] =
 {
 	{ "data/BGM/title001.wav", SOUND_LOOP_ON },			// タイトルBGM
 	{ "data/BGM/game001.wav", SOUND_LOOP_ON },			// ゲームBGM
-	{ "data/SE/playerdeath.wav", SOUND_LOOP_ON },		// 爆発音
-	{ "data/SE/PressEntre.wav", SOUND_LOOP_OFF },		// PressEnter
-	{ "data/SE/walk.wav", SOUND_LOOP_OFF },				//足音音
-	{ "data/SE/bomb.wav", SOUND_LOOP_OFF },				// 弾があたったときの音
-	{ "data/SE/Fall.wav", SOUND_LOOP_OFF },				// 着地音
-	{ "data/SE/jump.wav", SOUND_LOOP_OFF },				// ジャンプ
-	{ "data/SE/bullet.wav", SOUND_LOOP_OFF },			// 弾発射
-	{ "data/SE/bullet001.wav", SOUND_LOOP_OFF },		// 弾発射
-	{ "data/SE/turbo001.wav", SOUND_LOOP_OFF },			// ターボ発射
-	{ "data/SE/countdown.wav", SOUND_LOOP_OFF },		// カウントダウン音
-	{ "data/SE/Slash.wav", SOUND_LOOP_OFF },			// 斬撃音
+	{ "data/BGM/slash.wav", SOUND_LOOP_OFF },			// 斬撃音
+	{ "data/BGM/stomp.wav", SOUND_LOOP_OFF },			// 叩きつけ
+	{ "data/BGM/sword_skill.wav", SOUND_LOOP_OFF },		// ソードスキル
+	{ "data/BGM/roar_cry.wav", SOUND_LOOP_OFF },		// 叫び
+	{ "data/BGM/roar_fire.wav", SOUND_LOOP_OFF },		// 叫び炎
 };
 
 //================================================
@@ -30,10 +29,10 @@ CSound::PARAM CSound::m_aParam[SOUND_LABEL_MAX] =
 //================================================
 CSound::CSound()
 {
-	m_pXAudio2 = NULL;	// XAudio2オブジェクトへのインターフェイス
-	m_pMasteringVoice = NULL;	// マスターボイス
+	m_pXAudio2 = NULL;										// XAudio2オブジェクトへのインターフェイス
+	m_pMasteringVoice = NULL;								// マスターボイス
 	memset(m_apSourceVoice, 0, sizeof(m_apSourceVoice));	// ソースボイス
-	memset(m_apDataAudio, 0, sizeof(m_apDataAudio));	// オーディオデータ
+	memset(m_apDataAudio, 0, sizeof(m_apDataAudio));		// オーディオデータ
 	memset(m_aSizeAudio, 0, sizeof(m_aSizeAudio));
 }
 
@@ -46,9 +45,27 @@ CSound::~CSound()
 }
 
 //================================================
+// インスタンス生成
+//================================================
+CSound * CSound::Create(void)
+{
+	// メモリ確保
+	CSound *pSound = new CSound;
+
+	// !nullcheck
+	if (pSound != NULL)
+	{
+		// 初期化処理
+		pSound->Init();
+	}
+
+	return pSound;
+}
+
+//================================================
 //初期化処理
 //================================================
-HRESULT CSound::Init(HWND hWnd)
+HRESULT CSound::Init(void)
 {
 	HRESULT hr;
 

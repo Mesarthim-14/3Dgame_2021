@@ -15,25 +15,23 @@
 #include "player.h"
 #include "game.h"
 #include "particle.h"
-#include "particle_factory.h"
+#include "effect_factory.h"
 #include "fade.h"
-
-//=============================================================================
-// マクロ定義
-//=============================================================================
+#include "resource_manager.h"
 
 //=============================================================================
 // コンストラクタ
 //=============================================================================
 CEnemy::CEnemy(PRIORITY Priority)
 {
-	m_MotionState = ENEMY_MOTION_IDOL;
+	m_nMotionState = 0;
 	m_bActive = false;
 	m_bAttack = false;
 	m_bRange = false;
 	m_nAttackInter = 0;
 	m_nAttackFlameCnt = 0;
 	m_nArmorFlame = 0;
+	m_bPerception = true;
 }
 
 //=============================================================================
@@ -66,7 +64,6 @@ HRESULT CEnemy::Init(D3DXVECTOR3 pos, D3DXVECTOR3 rot)
 	// 初期化処理
 	CCharacter::Init(pos, rot);			// 座標、角度
 	SetCType(CHARACTER_TYPE_ENEMY);		// キャラクターのタイプ
-//	LifeBarCreate(PLAYER_LIFE_NUM);											// ライフバーの生成
 
 	return S_OK;
 }
@@ -109,6 +106,9 @@ void CEnemy::Update(void)
 		{
 			// 攻撃の処理
 			Attack();
+
+			// フレームのカウントを戻す
+			m_nAttackFlameCnt = 0;
 		}
 	}
 
@@ -134,15 +134,13 @@ void CEnemy::Draw(void)
 //=============================================================================
 void CEnemy::UpdateState(void)
 {
-	CSound *pSound = CManager::GetSound();
+	CSound *pSound = CManager::GetResourceManager()->GetSoundClass();
 
 	STATE state = GetState();
 
 	switch (state)
 	{
 	case STATE_NORMAL:
-		// 通常状態
-
 		break;
 
 	case STATE_DAMAGE:
@@ -159,64 +157,8 @@ void CEnemy::UpdateState(void)
 		}
 	}
 		break;
+
 	default:
-		break;
-	}
-}
-
-//=============================================================================
-// モーション状態
-//=============================================================================
-void CEnemy::UpdateMotionState(void)
-{
-	ENEMY_MOTION_STATE MotionState = (ENEMY_MOTION_STATE)GetMotionState();
-
-	int nKey = GetKey();
-
-	switch (MotionState)
-	{
-	case ENEMY_MOTION_IDOL:
-		//	m_MotionState = MOTION_ATTACK;
-		break;
-	case ENEMY_MOTION_ATTACK:
-
-		// 攻撃モーション
-		if (nKey >= 1 && nKey <= 2)
-		{
-			// 攻撃時の処理
-			if (AttackCollision() == true)
-			{
-				// プレイヤーの情報取得
-				CPlayer *pPlayer = CGame::GetPlayer();
-
-				if (pPlayer != NULL)
-				{
-					if (pPlayer->GetState() != CPlayer::STATE_DAMAGE && pPlayer->GetArmor() == false)
-					{
-						if (pPlayer->GetMotionState() == CPlayer::MOTION_GUARD)
-						{
-							// プレイヤーにダメージを与える
-							pPlayer->AddDamage(GetAttackPower() / PLAYER_GUARD_CUT_DAMAGE);
-						}
-						else
-						{
-							// プレイヤーにダメージを与える
-							pPlayer->AddDamage(GetAttackPower());
-						}
-
-						// 無敵時間
-						pPlayer->SetArmor(true);
-
-						// 爆発の生成
-						CParticleFactory::CreateParticle(pPlayer->GetPos(), CParticleFactory::PARTICLE_NUM_EXPLOSION);
-					}
-				}
-			}
-		}
-
-		break;
-	case ENEMY_MOTION_DAMAGE:
-
 		break;
 	}
 }
@@ -226,10 +168,8 @@ void CEnemy::UpdateMotionState(void)
 //=============================================================================
 void CEnemy::Perception(void)
 {
-	// モーションの状態を取得
-	ENEMY_MOTION_STATE state = (ENEMY_MOTION_STATE)GetMotionState();
-
-	if (state != CPlayer::MOTION_ATTACK)
+	// 追従のフラグ
+	if (m_bPerception == true)
 	{
 		// プレイヤーの情報
 		CPlayer *pPlayer = CGame::GetPlayer();		// メモリ確保
@@ -263,7 +203,6 @@ void CEnemy::Perception(void)
 
 			// 角度の設定
 			D3DXVECTOR3 rot = GetRot();
-
 			SetRot(D3DXVECTOR3(rot.x, fAngle, rot.z));
 
 			// モーションの設定
@@ -294,6 +233,7 @@ void CEnemy::Perception(void)
 			// モーションの設定
 			SetMotion(ENEMY_MOTION_IDOL);
 		}
+
 	}
 }
 
@@ -308,7 +248,7 @@ void CEnemy::Death(void)
 	// リザルト画面へ遷移
 	CFade::FADE_MODE mode = CManager::GetFade()->GetFade();
 	CFade *pFade = CManager::GetFade();
-	pFade->SetFade(CManager::MODE_TYPE_RESULT);
+	pFade->SetFade(CManager::MODE_TYPE_TITLE);
 }
 
 //=============================================================================
@@ -328,7 +268,8 @@ void CEnemy::Attack(void)
 	float fEposX = GetPos().x, fEposZ = GetPos().z;	// 敵の座標
 	float fAngle;									// 角度
 
-	fAngle = atan2f((fEposX - fPposX), (fEposZ - fPposZ));			//角度を決める
+	//角度を決める
+	fAngle = atan2f((fEposX - fPposX), (fEposZ - fPposZ));
 
 	// 角度の設定
 	D3DXVECTOR3 rot = GetRot();
@@ -337,6 +278,13 @@ void CEnemy::Attack(void)
 	// 攻撃モーション
 	SetMotion(ENEMY_MOTION_ATTACK);
 	m_nAttackFlameCnt = 0;
+}
+
+//=============================================================================
+// モーション状態の更新
+//=============================================================================
+void CEnemy::UpdateMotionState(void)
+{
 }
 
 //=============================================================================
@@ -361,4 +309,20 @@ void CEnemy::SetAttackInter(int nAttackInter)
 void CEnemy::SetArmorFlame(int nArmorFlame)
 {
 	m_nArmorFlame = nArmorFlame;
+}
+
+//=============================================================================
+// 追従のフラグ設定
+//=============================================================================
+void CEnemy::SetPerception(bool bPerception)
+{
+	m_bPerception = bPerception;
+}
+
+//=============================================================================
+// 攻撃カウントの設定
+//=============================================================================
+void CEnemy::SetAttackCnt(int nAttackCnt)
+{
+	m_nAttackFlameCnt = nAttackCnt;
 }

@@ -14,6 +14,7 @@
 #include "manager.h"
 #include "camera.h"
 #include "game.h"
+#include "keyboard.h"
 
 //=============================================================================
 // レンダリングクラスのコンストラクタ
@@ -21,6 +22,7 @@
 CRenderer::CRenderer()
 {
 	m_pD3D = NULL;			// Direct3Dオブジェクト
+	m_fillMode = D3DFILL_SOLID;
 }
 
 //=============================================================================
@@ -74,37 +76,6 @@ HRESULT CRenderer::Init(HWND hWnd, bool bWindow)
 		return E_FAIL;
 	}
 
-	m_pD3DPresentParam = new D3DPRESENT_PARAMETERS;
-
-	if (m_pD3DPresentParam == NULL)
-	{
-
-		return E_FAIL;
-	}
-
-	ZeroMemory(m_pD3DPresentParam, sizeof(D3DPRESENT_PARAMETERS));
-
-	// バックバッファの数 => 1
-	m_pD3DPresentParam->BackBufferCount = 1;
-
-	// バックバッファのフォーマット => D3DFMT_UNKNOWN(フォーマットを知りません)
-	m_pD3DPresentParam->BackBufferFormat = D3DFMT_UNKNOWN;
-
-	// ウィンドウモード設定 => 定数で切り替え
-	m_pD3DPresentParam->Windowed = true;
-
-	// スワップエフェクト設定 => ディスプレイドライバ依存
-	// スワップエフェクト => バックバッファとフロントバッファへの切り替え方法
-	m_pD3DPresentParam->SwapEffect = D3DSWAPEFFECT_DISCARD;
-
-	// 深度バッファの有無
-	m_pD3DPresentParam->EnableAutoDepthStencil = TRUE;
-
-	// 深度バッファのフォーマット
-	m_pD3DPresentParam->AutoDepthStencilFormat = D3DFMT_D24S8;
-
-	// 多様なフラグ設定
-	m_pD3DPresentParam->Flags = 0;
 
 	// デバイスの生成
 	// ディスプレイアダプタを表すためのデバイスを作成
@@ -188,6 +159,27 @@ void CRenderer::Update(void)
 {
 	// 全ての更新
 	CScene::UpdateAll();
+
+	// キーボード情報
+	CInputKeyboard *pKeyboard = CManager::GetKeyboard();
+	
+	// ポリゴンの表示
+	if (pKeyboard->GetPress(DIK_M))
+	{
+		LPDIRECT3DDEVICE9 pDevice = GetDevice();		// デバイスへのポインタ
+
+		switch (m_fillMode)
+		{
+		case D3DFILL_SOLID:
+			m_fillMode = D3DFILL_WIREFRAME;
+			break;
+		case D3DFILL_WIREFRAME:
+			m_fillMode = D3DFILL_SOLID;
+			break;
+		}
+
+		pDevice->SetRenderState(D3DRS_FILLMODE, m_fillMode);
+	}
 }
 
 //=============================================================================

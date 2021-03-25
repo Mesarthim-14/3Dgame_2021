@@ -1,7 +1,7 @@
 //=====================================================
 //
 // パーティクルクラス [particle.cpp]
-// Author : 小西優斗
+// Author : Konishi Yuuto
 //
 //=====================================================
 
@@ -12,6 +12,7 @@
 #include "manager.h"
 #include "renderer.h"
 #include "texture.h"
+#include "resource_manager.h"
 
 //=====================================================
 // マクロ定義
@@ -21,7 +22,7 @@
 //=====================================================
 // コンストラクタ
 //=====================================================
-CParticle::CParticle(PRIORITY Priority) : CBillboard(Priority)
+CEffect::CEffect(PRIORITY Priority) : CBillboard(Priority)
 {
 	
 }
@@ -29,7 +30,7 @@ CParticle::CParticle(PRIORITY Priority) : CBillboard(Priority)
 //=====================================================
 // デストラクタ
 //=====================================================
-CParticle::~CParticle()
+CEffect::~CEffect()
 {
 
 }
@@ -37,23 +38,20 @@ CParticle::~CParticle()
 //=====================================================
 // インスタンス生成
 //=====================================================
-CParticle * CParticle::Create(D3DXVECTOR3 pos, CParticleFactory::PARTICLE Particle,
-	LPDIRECT3DTEXTURE9 pTexture)
+CEffect * CEffect::Create(D3DXVECTOR3 pos, CEffectFactory::EFFECT Particle,
+	 int nTexInfo)
 {
 	// メモリ確保
-	CParticle *pParticle = new CParticle;
+	CEffect *pEffect = new CEffect;
 
-	if (pParticle != NULL)
+	if (pEffect != nullptr)
 	{
-		// テクスチャ設定
-		pParticle->BindTexture(pTexture);
-
 		// 距離の設定
 		D3DXVECTOR3 Distance;
 		Distance = D3DXVECTOR3(
-			(float)(rand() % (int)Particle.Distance.x + rand() % (int)Particle.Distance.x - rand() % (int)Particle.Distance.x - rand() % (int)Particle.Distance.x),
+			(float)(rand() % (int)Particle.Distance.x + rand() % (int)Particle.Distance.x - rand() % (int)Particle.Distance.x - rand() % (int)Particle.Distance.x + rand() % (int)Particle.Distance.x),
 			(float)(rand() % (int)Particle.Distance.y + rand() % (int)Particle.Distance.y),
-			(float)(rand() % (int)Particle.Distance.z + rand() % (int)Particle.Distance.z - rand() % (int)Particle.Distance.z - rand() % (int)Particle.Distance.z));
+			(float)(rand() % (int)Particle.Distance.z + rand() % (int)Particle.Distance.z - rand() % (int)Particle.Distance.z - rand() % (int)Particle.Distance.z + rand() % (int)Particle.Distance.z));
 
 		// ランダムで出現を決める
 		D3DXVECTOR3 TargetPos = D3DXVECTOR3(
@@ -62,54 +60,78 @@ CParticle * CParticle::Create(D3DXVECTOR3 pos, CParticleFactory::PARTICLE Partic
 			pos.z + Distance.z);
 
 		// 初期化処理
-		pParticle->Init(TargetPos, Particle.size);
+		pEffect->Init(TargetPos, Particle.size);
 
-		// 移動量設定
-		D3DXVECTOR3 move;
-		switch (Particle.bGravity)
+		CTexture *pTexture = CManager::GetResourceManager()->GetTextureClass();
+
+		// アニメーション情報
+		if (Particle.bAnimation == false)
 		{
-			// 重力無し
-		case false:
-			// 移動量
-			move =
-				D3DXVECTOR3(
-				(float)(rand() % (int)Particle.move.x - rand() % (int)Particle.move.x + rand() % (int)Particle.move.x),
-					(float)(rand() % (int)Particle.move.y + rand() % (int)Particle.move.y),
-					(float)(rand() % (int)Particle.move.z - rand() % (int)Particle.move.z + rand() % (int)Particle.move.z));
-			break;
-
-			// 重力あり
-		case true:
-			// 移動量
-			move =
-				D3DXVECTOR3(
-				(float)(rand() % (int)Particle.move.x - rand() % (int)Particle.move.x + rand() % (int)Particle.move.x),
-					(float)(rand() % (int)Particle.move.y + rand() % (int)Particle.move.y - rand() % (int)Particle.move.y),
-					(float)(rand() % (int)Particle.move.z - rand() % (int)Particle.move.z + rand() % (int)Particle.move.z));
-			break;
+			// テクスチャ設定
+			pEffect->BindTexture(pTexture->GetTexture((CTexture::TEXTURE_TYPE)nTexInfo));
+		}
+		else
+		{
+			// アニメーションテクスチャ設定
+			pEffect->BindTexture(pTexture->GetSeparateTexture((CTexture::SEPARATE_TEX_TYPE)nTexInfo));
+			pEffect->InitAnimation(
+				pTexture->GetSparateTexInfo((CTexture::SEPARATE_TEX_TYPE)nTexInfo),
+				pTexture->GetSparateTexLoop((CTexture::SEPARATE_TEX_TYPE)nTexInfo));
 		}
 
-		// 移動量
-		pParticle->SetMove(move);
+		// 移動量が一定以上なら
+		if (Particle.move.x >= 1.0f &&
+			Particle.move.y >= 1.0f &&
+			Particle.move.z >= 1.0f)
+		{
+			// 移動量設定
+			D3DXVECTOR3 move;
+			switch (Particle.bGravity)
+			{
+				// 重力無し
+			case false:
+				// 移動量
+				move =
+					D3DXVECTOR3(
+					(float)(rand() % (int)Particle.move.x - rand() % (int)Particle.move.x + rand() % (int)Particle.move.x),
+						(float)(rand() % (int)Particle.move.y + rand() % (int)Particle.move.y),
+						(float)(rand() % (int)Particle.move.z - rand() % (int)Particle.move.z + rand() % (int)Particle.move.z));
+				break;
 
-		// 色の設定
-		pParticle->SetColor(Particle.color);
+				// 重力あり
+			case true:
+				// 移動量
+				move =
+					D3DXVECTOR3(
+					(float)(rand() % (int)Particle.move.x - rand() % (int)Particle.move.x + rand() % (int)Particle.move.x),
+						(float)(rand() % (int)Particle.move.y + rand() % (int)Particle.move.y - rand() % (int)Particle.move.y),
+						(float)(rand() % (int)Particle.move.z - rand() % (int)Particle.move.z + rand() % (int)Particle.move.z));
+				break;
+			}
+			// 移動量
+			pEffect->SetMove(move);
+		}
+		else
+		{
+			// 移動量
+			pEffect->SetMove(Particle.move);
 
-		// 体力の設定
-		pParticle->SetLife(Particle.nLife);
+		}
 
-		// アルファテストの設定
-		pParticle->SetAlpha(Particle.bAlpha);
-
+		pEffect->SetColor(Particle.color);			// 色の設定
+		pEffect->SetLife(Particle.nLife);			// 体力の設定
+		pEffect->SetAlpha(Particle.bAlpha);			// アルファテストの設定
+		pEffect->SetAlphaNum(Particle.nAlphaNum);	// アルファの値の設定
+		pEffect->SetBlend(Particle.bBlend);			// 加算合成の設定
 	}
 
-	return pParticle;
+	return pEffect;
 }
 
 //=====================================================
 // 初期化処理
 //=====================================================
-HRESULT CParticle::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
+HRESULT CEffect::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
 	// 初期化処理
 	CBillboard::Init(pos, size);
@@ -118,31 +140,10 @@ HRESULT CParticle::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 }
 
 //=====================================================
-// 終了処理
+// 初期化処理
 //=====================================================
-void CParticle::Uninit(void)
-{
-	// 終了処理
-	CBillboard::Uninit();
-
-	//オブジェクト破棄
-	Release();
-}
-
-//=====================================================
-// 更新処理
-//=====================================================
-void CParticle::Update(void)
+void CEffect::Update(void)
 {
 	// 更新処理
 	CBillboard::Update();
-}
-
-//=====================================================
-// 描画処理
-//=====================================================
-void CParticle::Draw(void)
-{
-	// 描画処理
-	CBillboard::Draw();
 }

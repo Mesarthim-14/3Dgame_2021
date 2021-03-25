@@ -11,18 +11,21 @@
 #include "ui_skill.h"
 #include "manager.h"
 #include "renderer.h"
+#include "resource_manager.h"
 #include "texture.h"
+#include "resource_manager.h"
 
 //=============================================================================
 // オブジェクト生成
 //=============================================================================
-CUiSkill* CUiSkill::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size)
+CUiSkill* CUiSkill::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size, bool bUse)
 {
 	// オブジェクトを生成
 	CUiSkill* pUiSkill = new CUiSkill;
 
 	// 初期化処理
 	pUiSkill->Init(pos, size);
+	pUiSkill->SetUse(bUse);
 
 	return pUiSkill;
 }
@@ -32,7 +35,6 @@ CUiSkill* CUiSkill::Create(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 //=============================================================================
 CUiSkill::CUiSkill()
 {
-	m_bUse = false;
 }
 
 //=============================================================================
@@ -50,7 +52,12 @@ HRESULT CUiSkill::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 {
 	// 初期化処理
 	CUi::Init(pos, size);												// 座標、サイズ
-	BindTexture(CTexture::GetTexture(CTexture::TEXTURE_NUM_SKILL_UI));	// テクスチャ反映
+
+	// テクスチャポインタ
+	CTexture *pTexture = CManager::GetResourceManager()->GetTextureClass();
+
+	// テクスチャの設定
+	BindTexture(pTexture->GetTexture(CTexture::TEXTURE_NUM_SKILL_UI));
 
 	return S_OK;
 }
@@ -79,17 +86,9 @@ void CUiSkill::Update(void)
 void CUiSkill::Draw(void)
 {
 	// フラグがあれば
-	if (m_bUse == true)
+	if (GetUse() == true)
 	{
 		// 描画処理
-		CUi::Draw();
+	//	CUi::Draw();
 	}
-}
-
-//================================================
-// フラグの設定
-//================================================
-void CUiSkill::SetUse(bool bUse)
-{
-	m_bUse = bUse;
 }

@@ -31,16 +31,13 @@ bool CCollision::CollisionRectangleAndRectangle(D3DXVECTOR3 pos1, D3DXVECTOR3 po
 //*****************************************************************************
 bool CCollision::CollisionCircularAndCircular(D3DXVECTOR3 pos1, D3DXVECTOR3 pos2, float radius1, float radius2)
 {
-	//if (sqrt(pow(pos1.x - pos2.x, 2) + pow(pos1.y - pos2.y, 2)) <= radius1 + radius2)
-	//{
-	//}
-
 	if (pow(pos1.x - pos2.x, 2) +
 		pow(pos1.y - pos2.y, 2) +
 		pow(pos1.z - pos2.z, 2) <= pow(radius1 + radius2, 2))
 	{
 		return true;
 	}
+
 	return false;
 }
 

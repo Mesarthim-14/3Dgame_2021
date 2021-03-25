@@ -1,11 +1,11 @@
-//=============================================================================
-//
-// メイン処理 [camera.h]
-// Author : 山田陵太
-//
-//=============================================================================
 #ifndef _CAMERA_H_
 #define _CAMERA_H_
+//=============================================================================
+//
+// カメラクラスヘッダー [camera.h]
+// Author : Konishi Yuuto
+//
+//=============================================================================
 
 //=============================================================================
 //インクルードファイル
@@ -18,41 +18,39 @@
 class CLockon;
 
 //===========================================================
-//カメラクラス
+// カメラクラス
 //=============================================================================
 class CCamera
 {
 public:
-	typedef enum
-	{
-		CAMERASTATE_NONE = 0,
-		CAMERASTATE_NORMAL,	//通常
-		CAMERASTATE_END,	//終了
-		CAMERASTATE_MAX	//STATEの最大数
-	}CAMERASTATE;
+	CCamera();					// コンストラクタ
+	~CCamera();					// デストラクタ
 
-	//=========================================================================
-	//パブリックメンバ関数宣言
-	//=========================================================================
-	CCamera();
-	~CCamera();
-	static CCamera*Create(void);// クリエイト
-	HRESULT Init(void);
-	void Uninit(void);
-	void Update(void);
-	void SetCamera(void);
-	bool GetTargetBool(void);
-	float Getθ(void);
-	float Getφ(void);
-	D3DXVECTOR3 GetposV(void);
-	D3DXVECTOR3 GetposR(void);
-	D3DXMATRIX GetMtxView(void);
+	HRESULT Init(void);			// 初期化処理
+	void Uninit(void);			// 終了処理
+	void Update(void);			// 更新処理
+	void SetCamera(void);		// カメラの描画設定
+
+	// Set関数
 	void SetTarget(bool Target);
+
+	// Get関数
+	bool GetTargetBool(void);			// ターゲットカメラのフラグ
+	float Getθ(void);					// 縦の回転
+	float Getφ(void);					// 横の回転
+	D3DXVECTOR3 GetposV(void);			// カメラ座標
+	D3DXVECTOR3 GetposR(void);			// カメラ角度
+	D3DXMATRIX GetMtxView(void);		// マトリクスビュー
+	D3DXVECTOR3 GetposVDest(void);		// 目的の角度
+
+	static CCamera*Create(void);		// クリエイト
+
 private:
 	//=========================================================================
 	//プライベートメンバ関数宣言
 	//=========================================================================
 	void NomalUpdate(D3DXVECTOR3 PlayerPos, D3DXVECTOR3 PlayerRot);
+
 	//=========================================================================
 	//メンバ変数宣言
 	//=========================================================================
